@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgOpenGPS.Core\AgOpenGPS.Core.csproj" />
+    <!-- Plugin project references - these will be built automatically -->
+    <ProjectReference Include="..\AgOpenGPS.Plugins.Autosteer\AgOpenGPS.Plugins.Autosteer.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.DummyIO\AgOpenGPS.Plugins.DummyIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.Kinematics\AgOpenGPS.Plugins.Kinematics.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.PGN\AgOpenGPS.Plugins.PGN.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.SerialIO\AgOpenGPS.Plugins.SerialIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.UI\AgOpenGPS.Plugins.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Post-build target to copy plugin DLLs to plugins folder -->
+  <Target Name="CopyPlugins" AfterTargets="Build">
+    <MakeDir Directories="$(OutputPath)plugins" />
+    <ItemGroup>
+      <PluginFiles Include="..\AgOpenGPS.Plugins.Autosteer\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.Autosteer.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.DummyIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.DummyIO.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.Kinematics\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.Kinematics.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.PGN\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.PGN.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.SerialIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.SerialIO.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.UI\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.UI.dll" />
+      <!-- Also copy PluginContracts to plugins folder so plugins can find it -->
+      <PluginFiles Include="..\AgOpenGPS.PluginContracts\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.PluginContracts.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(OutputPath)plugins" SkipUnchangedFiles="true" />
+    <Message Text="Copied plugin DLLs to $(OutputPath)plugins" Importance="high" />
+  </Target>
+
+</Project>

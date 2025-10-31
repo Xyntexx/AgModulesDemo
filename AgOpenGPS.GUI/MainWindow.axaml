@@ -1,0 +1,132 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AgOpenGPS.GUI.ViewModels"
+        xmlns:converters="using:AgOpenGPS.GUI.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
+        x:Class="AgOpenGPS.GUI.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="AgOpenGPS - Precision Agriculture"
+        Width="1024" Height="768">
+
+  <Grid RowDefinitions="Auto,*" Margin="10">
+
+    <!-- Header -->
+    <Border Grid.Row="0" Background="#2C3E50" Padding="15" Margin="0,0,0,10" CornerRadius="5">
+      <TextBlock Text="AgOpenGPS Dashboard" FontSize="24" FontWeight="Bold" Foreground="White"/>
+    </Border>
+
+    <!-- Main Content -->
+    <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="10">
+
+      <!-- Left Panel - Telemetry -->
+      <Border Grid.Column="0" Background="#ECF0F1" CornerRadius="5" Padding="15">
+        <Grid RowDefinitions="Auto,Auto,*">
+
+          <!-- GPS Data -->
+          <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="GPS Position" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Latitude:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding Latitude}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Longitude:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding Longitude}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Heading:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding Heading}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Speed:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding Speed}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Fix Quality:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding FixQuality}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+            <Border Background="White" Padding="10" CornerRadius="3">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Satellites:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding SatelliteCount}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+          </StackPanel>
+
+          <!-- Autosteer Data -->
+          <StackPanel Grid.Row="1" Margin="0,0,0,15">
+            <TextBlock Text="Autosteer" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Steer Angle:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding SteerAngle}" FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+            <Border Background="White" Padding="10" CornerRadius="3">
+              <Grid ColumnDefinitions="120,*">
+                <TextBlock Text="Status:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding AutosteerEngaged, Converter={x:Static converters:BooleanToStringConverter.Instance}}"
+                          FontFamily="Consolas"/>
+              </Grid>
+            </Border>
+          </StackPanel>
+
+          <!-- Event Log -->
+          <StackPanel Grid.Row="2">
+            <TextBlock Text="Event Log" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Border Background="White" CornerRadius="3" Padding="5">
+              <ListBox ItemsSource="{Binding LogMessages}" Height="200">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11"/>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Border>
+          </StackPanel>
+
+        </Grid>
+      </Border>
+
+      <!-- Right Panel - Status & Controls -->
+      <StackPanel Grid.Column="1" Spacing="10">
+
+        <Border Background="#3498DB" Padding="15" CornerRadius="5">
+          <StackPanel>
+            <TextBlock Text="System Status" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+            <TextBlock Text="All Systems Operational" Foreground="White"/>
+          </StackPanel>
+        </Border>
+
+        <Border Background="#ECF0F1" Padding="15" CornerRadius="5">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Quick Actions" FontSize="16" FontWeight="Bold"/>
+            <Button Content="Settings" HorizontalAlignment="Stretch" Padding="10"/>
+            <Button Content="Calibrate GPS" HorizontalAlignment="Stretch" Padding="10"/>
+            <Button Content="Reset Autosteer" HorizontalAlignment="Stretch" Padding="10"/>
+          </StackPanel>
+        </Border>
+
+        <Border Background="#E74C3C" Padding="15" CornerRadius="5">
+          <Button Content="EMERGENCY STOP" HorizontalAlignment="Stretch" Padding="15"
+                  Foreground="White" FontWeight="Bold" FontSize="14"/>
+        </Border>
+
+      </StackPanel>
+
+    </Grid>
+  </Grid>
+
+</Window>

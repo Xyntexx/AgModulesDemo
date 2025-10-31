@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.6" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.6" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.6" />
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.6">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgOpenGPS.Core\AgOpenGPS.Core.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.PluginContracts\AgOpenGPS.PluginContracts.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.Autosteer\AgOpenGPS.Plugins.Autosteer.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.DummyIO\AgOpenGPS.Plugins.DummyIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.Kinematics\AgOpenGPS.Plugins.Kinematics.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.PGN\AgOpenGPS.Plugins.PGN.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.SerialIO\AgOpenGPS.Plugins.SerialIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Plugins.UI\AgOpenGPS.Plugins.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="CopyPlugins" AfterTargets="Build">
+    <MakeDir Directories="$(OutputPath)plugins" />
+    <ItemGroup>
+      <PluginFiles Include="..\AgOpenGPS.Plugins.Autosteer\$(OutputPath)AgOpenGPS.Plugins.Autosteer.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.DummyIO\$(OutputPath)AgOpenGPS.Plugins.DummyIO.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.Kinematics\$(OutputPath)AgOpenGPS.Plugins.Kinematics.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.PGN\$(OutputPath)AgOpenGPS.Plugins.PGN.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.SerialIO\$(OutputPath)AgOpenGPS.Plugins.SerialIO.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Plugins.UI\$(OutputPath)AgOpenGPS.Plugins.UI.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(OutputPath)plugins" />
+  </Target>
+</Project>
