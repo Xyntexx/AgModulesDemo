@@ -97,3 +97,4 @@ ehthumbs.db
 !PluginContracts/**/*.dll
 !ExamplePlugin1/**/*.dll
 !ExamplePlugin2/**/*.dll
+nul

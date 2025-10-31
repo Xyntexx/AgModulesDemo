@@ -1,4 +1,4 @@
-namespace AgOpenGPS.PluginContracts.Messages;
+namespace AgOpenGPS.ModuleContracts.Messages;
 
 /// <summary>Raw data received from IO channels</summary>
 public struct RawDataReceivedMessage

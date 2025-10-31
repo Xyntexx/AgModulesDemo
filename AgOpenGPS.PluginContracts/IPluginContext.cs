@@ -1,14 +1,14 @@
-namespace AgOpenGPS.PluginContracts;
+namespace AgOpenGPS.ModuleContracts;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Services provided by the core to plugins
+/// Services provided by the core to modules
 /// </summary>
-public interface IPluginContext
+public interface IModuleContext
 {
-    /// <summary>High-performance message bus for plugin communication</summary>
+    /// <summary>High-performance message bus for module communication</summary>
     IMessageBus MessageBus { get; }
 
     /// <summary>Dependency injection container</summary>
@@ -17,7 +17,7 @@ public interface IPluginContext
     /// <summary>Configuration access</summary>
     IConfiguration Configuration { get; }
 
-    /// <summary>Logger for this plugin</summary>
+    /// <summary>Logger for this module</summary>
     ILogger Logger { get; }
 
     /// <summary>Cancellation token signaling application shutdown</summary>

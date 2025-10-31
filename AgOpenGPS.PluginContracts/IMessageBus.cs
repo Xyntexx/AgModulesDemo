@@ -1,4 +1,4 @@
-namespace AgOpenGPS.PluginContracts;
+namespace AgOpenGPS.ModuleContracts;
 
 /// <summary>
 /// High-performance in-process message bus for real-time communication

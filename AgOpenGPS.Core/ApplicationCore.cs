@@ -1,13 +1,13 @@
 namespace AgOpenGPS.Core;
 
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Main application kernel - manages plugin lifecycle with hot reload support
+/// Main application kernel - manages module lifecycle with hot reload support
 /// </summary>
 public class ApplicationCore : IDisposable
 {
@@ -15,7 +15,7 @@ public class ApplicationCore : IDisposable
     private readonly IConfiguration _configuration;
     private readonly ILogger<ApplicationCore> _logger;
     private readonly MessageBus _messageBus;
-    private readonly PluginManager _pluginManager;
+    private readonly ModuleManager _moduleManager;
     private readonly CancellationTokenSource _shutdownCts = new();
     private volatile bool _disposed;
 
@@ -29,38 +29,38 @@ public class ApplicationCore : IDisposable
         _configuration = configuration;
         _logger = logger;
         _messageBus = messageBus;
-        _pluginManager = new PluginManager(
+        _moduleManager = new ModuleManager(
             _services,
             _configuration,
-            _services.GetRequiredService<ILogger<PluginManager>>(),
+            _services.GetRequiredService<ILogger<ModuleManager>>(),
             _messageBus
         );
     }
 
     /// <summary>
-    /// Get access to plugin manager for runtime operations
+    /// Get access to module manager for runtime operations
     /// </summary>
-    public PluginManager PluginManager => _pluginManager;
+    public ModuleManager ModuleManager => _moduleManager;
 
     public async Task StartAsync()
     {
         _logger.LogInformation("AgOpenGPS Core starting...");
 
-        // 1. Discover plugins
-        var pluginDir = _configuration.GetValue<string>("Core:PluginDirectory") ?? "./plugins";
-        var loader = new PluginLoader(pluginDir, _services.GetRequiredService<ILogger<PluginLoader>>());
-        var plugins = loader.DiscoverPlugins();
+        // 1. Discover modules
+        var moduleDir = _configuration.GetValue<string>("Core:ModuleDirectory") ?? "./modules";
+        var loader = new ModuleLoader(moduleDir, _services.GetRequiredService<ILogger<ModuleLoader>>());
+        var modules = loader.DiscoverModules();
 
         // 2. Resolve load order
-        var orderedPlugins = loader.ResolveLoadOrder(plugins);
+        var orderedModules = loader.ResolveLoadOrder(modules);
 
-        // 3. Load all plugins using PluginManager
-        foreach (var plugin in orderedPlugins)
+        // 3. Load all modules using ModuleManager
+        foreach (var module in orderedModules)
         {
-            var result = await _pluginManager.LoadPluginAsync(plugin);
+            var result = await _moduleManager.LoadModuleAsync(module);
             if (!result.Success)
             {
-                _logger.LogError($"Failed to load plugin {plugin.Name}: {result.ErrorMessage}");
+                _logger.LogError($"Failed to load module {module.Name}: {result.ErrorMessage}");
                 if (result.MissingDependencies != null)
                 {
                     _logger.LogError($"Missing dependencies: {string.Join(", ", result.MissingDependencies)}");
@@ -74,8 +74,8 @@ public class ApplicationCore : IDisposable
             TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         });
 
-        var loadedCount = _pluginManager.GetLoadedPlugins().Count;
-        _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} plugins");
+        var loadedCount = _moduleManager.GetLoadedModules().Count;
+        _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} modules");
     }
 
     public async Task StopAsync()
@@ -90,50 +90,50 @@ public class ApplicationCore : IDisposable
             TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         });
 
-        // Shutdown all plugins via PluginManager
-        await _pluginManager.ShutdownAllAsync();
+        // Shutdown all modules via ModuleManager
+        await _moduleManager.ShutdownAllAsync();
 
         _logger.LogInformation("AgOpenGPS Core stopped");
     }
 
     /// <summary>
-    /// Runtime plugin management - load a new plugin
+    /// Runtime module management - load a new module
     /// </summary>
-    public async Task<PluginLoadResult> LoadPluginAsync(IAgPlugin plugin)
+    public async Task<ModuleLoadResult> LoadModuleAsync(IAgModule module)
     {
-        return await _pluginManager.LoadPluginAsync(plugin);
+        return await _moduleManager.LoadModuleAsync(module);
     }
 
     /// <summary>
-    /// Runtime plugin management - unload a plugin
+    /// Runtime module management - unload a module
     /// </summary>
-    public async Task<PluginUnloadResult> UnloadPluginAsync(string pluginId)
+    public async Task<ModuleUnloadResult> UnloadModuleAsync(string moduleId)
     {
-        return await _pluginManager.UnloadPluginAsync(pluginId);
+        return await _moduleManager.UnloadModuleAsync(moduleId);
     }
 
     /// <summary>
-    /// Runtime plugin management - reload a plugin
+    /// Runtime module management - reload a module
     /// </summary>
-    public async Task<PluginReloadResult> ReloadPluginAsync(string pluginId)
+    public async Task<ModuleReloadResult> ReloadModuleAsync(string moduleId)
     {
-        return await _pluginManager.ReloadPluginAsync(pluginId);
+        return await _moduleManager.ReloadModuleAsync(moduleId);
     }
 
     /// <summary>
-    /// Get information about all loaded plugins
+    /// Get information about all loaded modules
     /// </summary>
-    public IReadOnlyList<PluginInfo> GetLoadedPlugins()
+    public IReadOnlyList<ModuleInfo> GetLoadedModules()
     {
-        return _pluginManager.GetLoadedPlugins();
+        return _moduleManager.GetLoadedModules();
     }
 
     /// <summary>
-    /// Perform health check on all plugins
+    /// Perform health check on all modules
     /// </summary>
     public async Task<HealthCheckResult> PerformHealthCheckAsync()
     {
-        return await _pluginManager.PerformHealthCheckAsync();
+        return await _moduleManager.PerformHealthCheckAsync();
     }
 
     public void Dispose()
@@ -141,7 +141,7 @@ public class ApplicationCore : IDisposable
         if (_disposed) return;
 
         _disposed = true;
-        _pluginManager.Dispose();
+        _moduleManager.Dispose();
         _messageBus.Dispose();
         _shutdownCts.Dispose();
     }

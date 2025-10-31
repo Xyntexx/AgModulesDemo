@@ -1,4 +1,4 @@
-namespace AgOpenGPS.PluginContracts.Messages;
+namespace AgOpenGPS.ModuleContracts.Messages;
 
 /// <summary>Steer command to autosteer controller</summary>
 public struct SteerCommandMessage

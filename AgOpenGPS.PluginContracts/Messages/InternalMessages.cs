@@ -1,4 +1,4 @@
-namespace AgOpenGPS.PluginContracts.Messages;
+namespace AgOpenGPS.ModuleContracts.Messages;
 
 /// <summary>Guidance line for autosteer to follow</summary>
 public struct GuidanceLineMessage
@@ -30,7 +30,7 @@ public struct ApplicationStoppingEvent
 /// <summary>Settings changed event</summary>
 public struct SettingsChangedMessage
 {
-    public string PluginName;
+    public string ModuleName;
     public string SettingsJson;
     public long TimestampMs;
 }

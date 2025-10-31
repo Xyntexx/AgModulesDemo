@@ -1,13 +1,13 @@
-namespace AgOpenGPS.PluginContracts;
+namespace AgOpenGPS.ModuleContracts;
 
 /// <summary>
-/// Base interface for plugin settings
-/// Plugins can implement this to expose configurable settings
+/// Base interface for module settings
+/// Modules can implement this to expose configurable settings
 /// </summary>
-public interface IPluginSettings
+public interface IModuleSettings
 {
     /// <summary>
-    /// Unique identifier for the settings (typically matches plugin name)
+    /// Unique identifier for the settings (typically matches module name)
     /// </summary>
     string SettingsId { get; }
 
@@ -24,17 +24,17 @@ public interface IPluginSettings
 }
 
 /// <summary>
-/// Interface for plugins that support runtime configuration
+/// Interface for modules that support runtime configuration
 /// </summary>
-public interface IConfigurablePlugin : IAgPlugin
+public interface IConfigurableModule : IAgModule
 {
     /// <summary>
-    /// Get the settings object for this plugin
+    /// Get the settings object for this module
     /// </summary>
-    IPluginSettings GetSettings();
+    IModuleSettings GetSettings();
 
     /// <summary>
     /// Update settings from external source (e.g., UI)
     /// </summary>
-    void UpdateSettings(IPluginSettings settings);
+    void UpdateSettings(IModuleSettings settings);
 }

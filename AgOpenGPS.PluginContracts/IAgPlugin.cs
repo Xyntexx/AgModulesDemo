@@ -1,42 +1,42 @@
-namespace AgOpenGPS.PluginContracts;
+namespace AgOpenGPS.ModuleContracts;
 
 /// <summary>
-/// Base interface for all AgOpenGPS plugins
+/// Base interface for all AgOpenGPS modules
 /// </summary>
-public interface IAgPlugin
+public interface IAgModule
 {
-    /// <summary>Plugin name for display and logging</summary>
+    /// <summary>Module name for display and logging</summary>
     string Name { get; }
 
-    /// <summary>Plugin version</summary>
+    /// <summary>Module version</summary>
     Version Version { get; }
 
-    /// <summary>Plugin category for load ordering</summary>
-    PluginCategory Category { get; }
+    /// <summary>Module category for load ordering</summary>
+    ModuleCategory Category { get; }
 
-    /// <summary>Names of other plugins this depends on (loaded first)</summary>
+    /// <summary>Names of other modules this depends on (loaded first)</summary>
     string[] Dependencies { get; }
 
-    /// <summary>Initialize plugin with core services</summary>
-    Task InitializeAsync(IPluginContext context);
+    /// <summary>Initialize module with core services</summary>
+    Task InitializeAsync(IModuleContext context);
 
-    /// <summary>Start plugin processing (called after all plugins initialized)</summary>
+    /// <summary>Start module processing (called after all modules initialized)</summary>
     Task StartAsync();
 
-    /// <summary>Stop plugin processing gracefully</summary>
+    /// <summary>Stop module processing gracefully</summary>
     Task StopAsync();
 
     /// <summary>Cleanup resources</summary>
     Task ShutdownAsync();
 
     /// <summary>Get current health status</summary>
-    PluginHealth GetHealth();
+    ModuleHealth GetHealth();
 }
 
 /// <summary>
-/// Plugin categories for load ordering and organization
+/// Module categories for load ordering and organization
 /// </summary>
-public enum PluginCategory
+public enum ModuleCategory
 {
     IO = 0,              // Serial, UDP, CAN - load first
     DataProcessing = 10,  // PGN parser, Kalman filter
@@ -44,13 +44,14 @@ public enum PluginCategory
     Control = 30,         // Autosteer, section control
     Visualization = 40,   // Mapping, UI
     Logging = 50,         // Data logging - load last
-    Integration = 60      // External services
+    Integration = 60,     // External services
+    Monitoring = 70       // Monitoring and diagnostics
 }
 
 /// <summary>
-/// Plugin health status
+/// Module health status
 /// </summary>
-public enum PluginHealth
+public enum ModuleHealth
 {
     Healthy,
     Degraded,

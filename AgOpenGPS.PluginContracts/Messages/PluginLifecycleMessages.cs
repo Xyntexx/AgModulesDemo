@@ -1,32 +1,32 @@
-namespace AgOpenGPS.PluginContracts.Messages;
+namespace AgOpenGPS.ModuleContracts.Messages;
 
 /// <summary>
-/// Event published when a plugin is loaded at runtime
+/// Event published when a module is loaded at runtime
 /// </summary>
-public struct PluginLoadedEvent
+public struct ModuleLoadedEvent
 {
-    public string PluginId { get; set; }
-    public string PluginName { get; set; }
+    public string ModuleId { get; set; }
+    public string ModuleName { get; set; }
     public string Version { get; set; }
     public long TimestampMs { get; set; }
 }
 
 /// <summary>
-/// Event published when a plugin is unloaded at runtime
+/// Event published when a module is unloaded at runtime
 /// </summary>
-public struct PluginUnloadedEvent
+public struct ModuleUnloadedEvent
 {
-    public string PluginId { get; set; }
-    public string PluginName { get; set; }
+    public string ModuleId { get; set; }
+    public string ModuleName { get; set; }
     public long TimestampMs { get; set; }
 }
 
 /// <summary>
-/// Event published when a plugin is reloaded at runtime
+/// Event published when a module is reloaded at runtime
 /// </summary>
-public struct PluginReloadedEvent
+public struct ModuleReloadedEvent
 {
-    public string PluginId { get; set; }
-    public string PluginName { get; set; }
+    public string ModuleId { get; set; }
+    public string ModuleName { get; set; }
     public long TimestampMs { get; set; }
 }
