@@ -1,10 +1,10 @@
 namespace AgOpenGPS.Core;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-public class PluginContext : IPluginContext
+public class ModuleContext : IModuleContext
 {
     public IMessageBus MessageBus { get; }
     public IServiceProvider Services { get; }
@@ -12,7 +12,7 @@ public class PluginContext : IPluginContext
     public ILogger Logger { get; }
     public CancellationToken AppShutdownToken { get; }
 
-    public PluginContext(
+    public ModuleContext(
         IMessageBus messageBus,
         IServiceProvider services,
         IConfiguration configuration,

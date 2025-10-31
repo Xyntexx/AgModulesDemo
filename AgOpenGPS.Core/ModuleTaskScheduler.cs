@@ -4,28 +4,28 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Dedicated task scheduler that ensures each plugin runs on its own thread pool
-/// preventing blocking operations in one plugin from affecting others
+/// Dedicated task scheduler that ensures each module runs on its own thread pool
+/// preventing blocking operations in one module from affecting others
 /// </summary>
-public class PluginTaskScheduler
+public class ModuleTaskScheduler
 {
-    private readonly ConcurrentDictionary<string, PluginThreadPool> _pluginThreadPools = new();
-    private readonly ILogger<PluginTaskScheduler> _logger;
+    private readonly ConcurrentDictionary<string, ModuleThreadPool> _pluginThreadPools = new();
+    private readonly ILogger<ModuleTaskScheduler> _logger;
 
-    public PluginTaskScheduler(ILogger<PluginTaskScheduler> logger)
+    public ModuleTaskScheduler(ILogger<ModuleTaskScheduler> logger)
     {
         _logger = logger;
     }
 
     /// <summary>
-    /// Execute a plugin operation on its dedicated thread pool
+    /// Execute a module operation on its dedicated thread pool
     /// </summary>
     public async Task<T> ExecuteOnPluginThreadAsync<T>(
-        string pluginId,
+        string moduleId,
         Func<Task<T>> operation,
         CancellationToken cancellationToken = default)
     {
-        var threadPool = _pluginThreadPools.GetOrAdd(pluginId, id => new PluginThreadPool(id, _logger));
+        var threadPool = _pluginThreadPools.GetOrAdd(moduleId, id => new ModuleThreadPool(id, _logger));
 
         var tcs = new TaskCompletionSource<T>();
 
@@ -51,14 +51,14 @@ public class PluginTaskScheduler
     }
 
     /// <summary>
-    /// Execute a plugin operation on its dedicated thread pool (void return)
+    /// Execute a module operation on its dedicated thread pool (void return)
     /// </summary>
     public async Task ExecuteOnPluginThreadAsync(
-        string pluginId,
+        string moduleId,
         Func<Task> operation,
         CancellationToken cancellationToken = default)
     {
-        await ExecuteOnPluginThreadAsync<object>(pluginId, async () =>
+        await ExecuteOnPluginThreadAsync<object>(moduleId, async () =>
         {
             await operation();
             return null!;
@@ -66,32 +66,32 @@ public class PluginTaskScheduler
     }
 
     /// <summary>
-    /// Execute a synchronous plugin operation on its dedicated thread
+    /// Execute a synchronous module operation on its dedicated thread
     /// </summary>
     public async Task<T> ExecuteOnPluginThread<T>(
-        string pluginId,
+        string moduleId,
         Func<T> operation,
         CancellationToken cancellationToken = default)
     {
-        return await ExecuteOnPluginThreadAsync(pluginId, () => Task.FromResult(operation()), cancellationToken);
+        return await ExecuteOnPluginThreadAsync(moduleId, () => Task.FromResult(operation()), cancellationToken);
     }
 
     /// <summary>
     /// Cleanup thread pool for a plugin
     /// </summary>
-    public void CleanupPlugin(string pluginId)
+    public void CleanupPlugin(string moduleId)
     {
-        if (_pluginThreadPools.TryRemove(pluginId, out var threadPool))
+        if (_pluginThreadPools.TryRemove(moduleId, out var threadPool))
         {
             threadPool.Dispose();
-            _logger.LogDebug($"Cleaned up thread pool for plugin {pluginId}");
+            _logger.LogDebug($"Cleaned up thread pool for module {moduleId}");
         }
     }
 
     /// <summary>
     /// Get statistics for monitoring
     /// </summary>
-    public Dictionary<string, PluginThreadPoolStats> GetStatistics()
+    public Dictionary<string, ModuleThreadPoolStats> GetStatistics()
     {
         return _pluginThreadPools.ToDictionary(
             kvp => kvp.Key,
@@ -102,9 +102,9 @@ public class PluginTaskScheduler
 /// <summary>
 /// Dedicated thread pool for a single plugin
 /// </summary>
-internal class PluginThreadPool : IDisposable
+internal class ModuleThreadPool : IDisposable
 {
-    private readonly string _pluginId;
+    private readonly string _moduleId;
     private readonly ILogger _logger;
     private readonly BlockingCollection<Func<Task>> _workQueue;
     private readonly List<Thread> _threads;
@@ -114,9 +114,9 @@ internal class PluginThreadPool : IDisposable
     private long _failedTasks;
     private volatile bool _disposed;
 
-    public PluginThreadPool(string pluginId, ILogger logger, int threadCount = 2)
+    public ModuleThreadPool(string moduleId, ILogger logger, int threadCount = 2)
     {
-        _pluginId = pluginId;
+        _moduleId = moduleId;
         _logger = logger;
         _threadCount = threadCount;
         _workQueue = new BlockingCollection<Func<Task>>(new ConcurrentQueue<Func<Task>>());
@@ -128,7 +128,7 @@ internal class PluginThreadPool : IDisposable
         {
             var thread = new Thread(WorkerThread)
             {
-                Name = $"Plugin-{_pluginId}-Worker-{i}",
+                Name = $"Plugin-{_moduleId}-Worker-{i}",
                 IsBackground = true,
                 Priority = ThreadPriority.Normal
             };
@@ -136,14 +136,14 @@ internal class PluginThreadPool : IDisposable
             _threads.Add(thread);
         }
 
-        _logger.LogDebug($"Created thread pool with {threadCount} threads for plugin {_pluginId}");
+        _logger.LogDebug($"Created thread pool with {threadCount} threads for module {_moduleId}");
     }
 
     public void QueueWork(Func<Task> work)
     {
         if (_disposed)
         {
-            throw new ObjectDisposedException(nameof(PluginThreadPool));
+            throw new ObjectDisposedException(nameof(ModuleThreadPool));
         }
 
         _workQueue.Add(work);
@@ -151,7 +151,7 @@ internal class PluginThreadPool : IDisposable
 
     private void WorkerThread()
     {
-        _logger.LogTrace($"Worker thread started for plugin {_pluginId}");
+        _logger.LogTrace($"Worker thread started for module {_moduleId}");
 
         try
         {
@@ -171,7 +171,7 @@ internal class PluginThreadPool : IDisposable
                 catch (Exception ex)
                 {
                     Interlocked.Increment(ref _failedTasks);
-                    _logger.LogError(ex, $"Error executing task for plugin {_pluginId}");
+                    _logger.LogError(ex, $"Error executing task for module {_moduleId}");
                 }
             }
         }
@@ -180,14 +180,14 @@ internal class PluginThreadPool : IDisposable
             // Expected during shutdown
         }
 
-        _logger.LogTrace($"Worker thread stopped for plugin {_pluginId}");
+        _logger.LogTrace($"Worker thread stopped for module {_moduleId}");
     }
 
-    public PluginThreadPoolStats GetStats()
+    public ModuleThreadPoolStats GetStats()
     {
-        return new PluginThreadPoolStats
+        return new ModuleThreadPoolStats
         {
-            PluginId = _pluginId,
+            ModuleId = _moduleId,
             ThreadCount = _threadCount,
             QueuedTasks = _workQueue.Count,
             CompletedTasks = Interlocked.Read(ref _completedTasks),
@@ -215,9 +215,9 @@ internal class PluginThreadPool : IDisposable
     }
 }
 
-public class PluginThreadPoolStats
+public class ModuleThreadPoolStats
 {
-    public required string PluginId { get; set; }
+    public required string ModuleId { get; set; }
     public int ThreadCount { get; set; }
     public int QueuedTasks { get; set; }
     public long CompletedTasks { get; set; }

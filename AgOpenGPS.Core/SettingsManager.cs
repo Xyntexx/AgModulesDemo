@@ -1,18 +1,18 @@
 namespace AgOpenGPS.Core;
 
 using System.Text.Json;
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Manages plugin settings, loading from configuration and coordinating updates
+/// Manages module settings, loading from configuration and coordinating updates
 /// </summary>
 public class SettingsManager
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<SettingsManager> _logger;
-    private readonly Dictionary<string, IConfigurablePlugin> _configurablePlugins = new();
+    private readonly Dictionary<string, IConfigurableModule> _configurablePlugins = new();
 
     public SettingsManager(IConfiguration configuration, ILogger<SettingsManager> logger)
     {
@@ -21,9 +21,9 @@ public class SettingsManager
     }
 
     /// <summary>
-    /// Register a plugin that supports configuration
+    /// Register a module that supports configuration
     /// </summary>
-    public void RegisterPlugin(IConfigurablePlugin plugin)
+    public void RegisterPlugin(IConfigurableModule plugin)
     {
         _configurablePlugins[plugin.Name] = plugin;
         _logger.LogDebug($"Registered configurable plugin: {plugin.Name}");
@@ -35,7 +35,7 @@ public class SettingsManager
     /// <summary>
     /// Load settings from appsettings.json for a plugin
     /// </summary>
-    private void LoadSettingsFromConfiguration(IConfigurablePlugin plugin)
+    private void LoadSettingsFromConfiguration(IConfigurableModule plugin)
     {
         try
         {
@@ -46,7 +46,7 @@ public class SettingsManager
             {
                 // Deserialize settings from configuration
                 var settingsType = settings.GetType();
-                var loadedSettings = settingsSection.Get(settingsType) as IPluginSettings;
+                var loadedSettings = settingsSection.Get(settingsType) as IModuleSettings;
 
                 if (loadedSettings != null)
                 {
@@ -79,7 +79,7 @@ public class SettingsManager
     /// <summary>
     /// Get settings for a specific plugin
     /// </summary>
-    public IPluginSettings? GetPluginSettings(string pluginName)
+    public IModuleSettings? GetPluginSettings(string pluginName)
     {
         if (_configurablePlugins.TryGetValue(pluginName, out var plugin))
         {
@@ -91,7 +91,7 @@ public class SettingsManager
     /// <summary>
     /// Update settings for a specific plugin
     /// </summary>
-    public bool UpdatePluginSettings(string pluginName, IPluginSettings settings)
+    public bool UpdatePluginSettings(string pluginName, IModuleSettings settings)
     {
         if (_configurablePlugins.TryGetValue(pluginName, out var plugin))
         {
@@ -109,14 +109,14 @@ public class SettingsManager
             }
         }
 
-        _logger.LogWarning($"Plugin {pluginName} not found or not configurable");
+        _logger.LogWarning($"Module {pluginName} not found or not configurable");
         return false;
     }
 
     /// <summary>
     /// Get all configurable plugins
     /// </summary>
-    public IReadOnlyDictionary<string, IConfigurablePlugin> GetConfigurablePlugins()
+    public IReadOnlyDictionary<string, IConfigurableModule> GetConfigurablePlugins()
     {
         return _configurablePlugins;
     }

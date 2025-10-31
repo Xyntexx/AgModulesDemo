@@ -1,12 +1,12 @@
 namespace AgOpenGPS.Core;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 using System.Collections.Concurrent;
 
 /// <summary>
 /// High-performance message bus implementation
 /// Thread-safe, zero-allocation for struct messages
-/// Supports scoped subscriptions for plugin lifecycle management
+/// Supports scoped subscriptions for module lifecycle management
 /// </summary>
 public class MessageBus : IMessageBus, IDisposable
 {
@@ -69,7 +69,7 @@ public class MessageBus : IMessageBus, IDisposable
     }
 
     /// <summary>
-    /// Unsubscribe all handlers for a given scope (e.g., plugin ID)
+    /// Unsubscribe all handlers for a given scope (e.g., module ID)
     /// </summary>
     public void UnsubscribeScope(string scope)
     {

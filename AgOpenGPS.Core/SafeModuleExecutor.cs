@@ -4,12 +4,12 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.ExceptionServices;
 
 /// <summary>
-/// Provides safe execution wrappers for plugin operations with comprehensive exception handling
+/// Provides safe execution wrappers for module operations with comprehensive exception handling
 /// </summary>
-public static class SafePluginExecutor
+public static class SafeModuleExecutor
 {
     /// <summary>
-    /// Execute a plugin operation with full exception protection
+    /// Execute a module operation with full exception protection
     /// </summary>
     public static async Task<OperationResult> ExecuteSafelyAsync(
         Func<Task> operation,
@@ -25,7 +25,7 @@ public static class SafePluginExecutor
         catch (OperationCanceledException)
         {
             // Expected during shutdown
-            logger.LogDebug($"{operationName} cancelled for plugin {pluginName}");
+            logger.LogDebug($"{operationName} cancelled for module {pluginName}");
             return OperationResult.Cancelled();
         }
         catch (OutOfMemoryException ex)
@@ -93,7 +93,7 @@ public static class SafePluginExecutor
     }
 
     /// <summary>
-    /// Execute a synchronous plugin operation with full exception protection
+    /// Execute a synchronous module operation with full exception protection
     /// </summary>
     public static OperationResult ExecuteSafely(
         Action operation,
@@ -108,7 +108,7 @@ public static class SafePluginExecutor
         }
         catch (OperationCanceledException)
         {
-            logger.LogDebug($"{operationName} cancelled for plugin {pluginName}");
+            logger.LogDebug($"{operationName} cancelled for module {pluginName}");
             return OperationResult.Cancelled();
         }
         catch (OutOfMemoryException ex)
@@ -135,7 +135,7 @@ public static class SafePluginExecutor
     }
 
     /// <summary>
-    /// Execute a plugin operation with timeout protection
+    /// Execute a module operation with timeout protection
     /// </summary>
     public static async Task<OperationResult> ExecuteWithTimeoutAsync(
         Func<Task> operation,
@@ -152,7 +152,7 @@ public static class SafePluginExecutor
 
         if (completedTask == timeoutTask)
         {
-            logger.LogWarning($"{operationName} timed out after {timeout.TotalSeconds}s for plugin {pluginName}");
+            logger.LogWarning($"{operationName} timed out after {timeout.TotalSeconds}s for module {pluginName}");
             return OperationResult.Failure($"Operation timed out after {timeout.TotalSeconds}s");
         }
 
@@ -177,7 +177,7 @@ public static class SafePluginExecutor
 }
 
 /// <summary>
-/// Result of a safe plugin operation
+/// Result of a safe module operation
 /// </summary>
 public class OperationResult
 {

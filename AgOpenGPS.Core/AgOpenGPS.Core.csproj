@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\AgOpenGPS.PluginContracts\AgOpenGPS.PluginContracts.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.ModuleContracts\AgOpenGPS.ModuleContracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

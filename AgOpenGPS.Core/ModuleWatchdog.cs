@@ -5,21 +5,21 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Monitors plugins for hanging/blocking behavior and can take corrective action
+/// Monitors modules for hanging/blocking behavior and can take corrective action
 /// </summary>
-public class PluginWatchdog : IDisposable
+public class ModuleWatchdog : IDisposable
 {
-    private readonly ILogger<PluginWatchdog> _logger;
-    private readonly ConcurrentDictionary<string, PluginMonitorState> _monitoredPlugins = new();
+    private readonly ILogger<ModuleWatchdog> _logger;
+    private readonly ConcurrentDictionary<string, ModuleMonitorState> _monitoredPlugins = new();
     private readonly Timer _checkTimer;
     private readonly TimeSpan _checkInterval;
     private readonly TimeSpan _hangThreshold;
     private volatile bool _disposed;
 
-    public event EventHandler<PluginHangDetectedEventArgs>? PluginHangDetected;
+    public event EventHandler<ModuleHangDetectedEventArgs>? PluginHangDetected;
 
-    public PluginWatchdog(
-        ILogger<PluginWatchdog> logger,
+    public ModuleWatchdog(
+        ILogger<ModuleWatchdog> logger,
         TimeSpan? checkInterval = null,
         TimeSpan? hangThreshold = null)
     {
@@ -33,17 +33,17 @@ public class PluginWatchdog : IDisposable
             _checkInterval,
             _checkInterval);
 
-        _logger.LogInformation($"Plugin watchdog started - check interval: {_checkInterval.TotalSeconds}s, hang threshold: {_hangThreshold.TotalSeconds}s");
+        _logger.LogInformation($"Module watchdog started - check interval: {_checkInterval.TotalSeconds}s, hang threshold: {_hangThreshold.TotalSeconds}s");
     }
 
     /// <summary>
-    /// Start monitoring a plugin operation
+    /// Start monitoring a module operation
     /// </summary>
-    public IDisposable MonitorOperation(string pluginId, string operationName)
+    public IDisposable MonitorOperation(string moduleId, string operationName)
     {
         if (_disposed) return new NullMonitor();
 
-        var state = _monitoredPlugins.GetOrAdd(pluginId, _ => new PluginMonitorState(pluginId));
+        var state = _monitoredPlugins.GetOrAdd(moduleId, _ => new ModuleMonitorState(moduleId));
 
         var operation = new OperationMonitor
         {
@@ -60,27 +60,27 @@ public class PluginWatchdog : IDisposable
     /// <summary>
     /// Record a heartbeat from a plugin
     /// </summary>
-    public void Heartbeat(string pluginId)
+    public void Heartbeat(string moduleId)
     {
         if (_disposed) return;
 
-        var state = _monitoredPlugins.GetOrAdd(pluginId, _ => new PluginMonitorState(pluginId));
+        var state = _monitoredPlugins.GetOrAdd(moduleId, _ => new ModuleMonitorState(moduleId));
         state.RecordHeartbeat();
     }
 
     /// <summary>
-    /// Stop monitoring a plugin (called on unload)
+    /// Stop monitoring a module (called on unload)
     /// </summary>
-    public void StopMonitoring(string pluginId)
+    public void StopMonitoring(string moduleId)
     {
-        _monitoredPlugins.TryRemove(pluginId, out _);
-        _logger.LogDebug($"Stopped monitoring plugin {pluginId}");
+        _monitoredPlugins.TryRemove(moduleId, out _);
+        _logger.LogDebug($"Stopped monitoring module {moduleId}");
     }
 
     /// <summary>
     /// Get monitoring statistics
     /// </summary>
-    public List<PluginMonitorStats> GetStatistics()
+    public List<ModuleMonitorStats> GetStatistics()
     {
         return _monitoredPlugins.Values
             .Select(state => state.GetStats())
@@ -103,16 +103,16 @@ public class PluginWatchdog : IDisposable
                 var duration = now - op.StartTime;
 
                 _logger.LogWarning(
-                    $"Plugin {state.PluginId} operation '{op.OperationName}' has been running for {duration.TotalSeconds:F1}s (thread {op.ThreadId})");
+                    $"Module {state.ModuleId} operation '{op.OperationName}' has been running for {duration.TotalSeconds:F1}s (thread {op.ThreadId})");
 
                 // Check if this is a new hang or ongoing
                 if (!state.IsHangReported(op))
                 {
                     state.MarkHangReported(op);
 
-                    PluginHangDetected?.Invoke(this, new PluginHangDetectedEventArgs
+                    PluginHangDetected?.Invoke(this, new ModuleHangDetectedEventArgs
                     {
-                        PluginId = state.PluginId,
+                        ModuleId = state.ModuleId,
                         OperationName = op.OperationName,
                         Duration = duration,
                         ThreadId = op.ThreadId
@@ -120,12 +120,12 @@ public class PluginWatchdog : IDisposable
                 }
             }
 
-            // Check for plugins with no heartbeat
+            // Check for modules with no heartbeat
             var timeSinceHeartbeat = now - state.LastHeartbeat;
             if (state.HeartbeatCount > 0 && timeSinceHeartbeat > _hangThreshold * 2)
             {
                 _logger.LogWarning(
-                    $"Plugin {state.PluginId} has not sent heartbeat for {timeSinceHeartbeat.TotalSeconds:F1}s");
+                    $"Module {state.ModuleId} has not sent heartbeat for {timeSinceHeartbeat.TotalSeconds:F1}s");
             }
         }
     }
@@ -138,7 +138,7 @@ public class PluginWatchdog : IDisposable
         _checkTimer?.Dispose();
         _monitoredPlugins.Clear();
 
-        _logger.LogInformation("Plugin watchdog stopped");
+        _logger.LogInformation("Module watchdog stopped");
     }
 
     private class NullMonitor : IDisposable
@@ -169,9 +169,9 @@ public class PluginWatchdog : IDisposable
 /// <summary>
 /// Tracks monitoring state for a single plugin
 /// </summary>
-internal class PluginMonitorState
+internal class ModuleMonitorState
 {
-    public string PluginId { get; }
+    public string ModuleId { get; }
     public DateTime LastHeartbeat { get; private set; }
     public long HeartbeatCount { get; private set; }
 
@@ -179,9 +179,9 @@ internal class PluginMonitorState
     private readonly ConcurrentDictionary<OperationMonitor, bool> _reportedHangs = new();
     private readonly object _lock = new();
 
-    public PluginMonitorState(string pluginId)
+    public ModuleMonitorState(string moduleId)
     {
-        PluginId = pluginId;
+        ModuleId = moduleId;
         LastHeartbeat = DateTime.UtcNow;
     }
 
@@ -221,12 +221,12 @@ internal class PluginMonitorState
         _reportedHangs[operation] = true;
     }
 
-    public PluginMonitorStats GetStats()
+    public ModuleMonitorStats GetStats()
     {
         var count = HeartbeatCount;
-        return new PluginMonitorStats
+        return new ModuleMonitorStats
         {
-            PluginId = PluginId,
+            ModuleId = ModuleId,
             ActiveOperations = _activeOperations.Count,
             HeartbeatCount = count,
             TimeSinceLastHeartbeat = DateTime.UtcNow - LastHeartbeat,
@@ -249,11 +249,11 @@ internal class OperationMonitor
 }
 
 /// <summary>
-/// Statistics about plugin monitoring
+/// Statistics about module monitoring
 /// </summary>
-public class PluginMonitorStats
+public class ModuleMonitorStats
 {
-    public required string PluginId { get; set; }
+    public required string ModuleId { get; set; }
     public int ActiveOperations { get; set; }
     public long HeartbeatCount { get; set; }
     public TimeSpan TimeSinceLastHeartbeat { get; set; }
@@ -261,11 +261,11 @@ public class PluginMonitorStats
 }
 
 /// <summary>
-/// Event args for plugin hang detection
+/// Event args for module hang detection
 /// </summary>
-public class PluginHangDetectedEventArgs : EventArgs
+public class ModuleHangDetectedEventArgs : EventArgs
 {
-    public required string PluginId { get; set; }
+    public required string ModuleId { get; set; }
     public required string OperationName { get; set; }
     public TimeSpan Duration { get; set; }
     public int ThreadId { get; set; }

@@ -1,29 +1,29 @@
 namespace AgOpenGPS.Core;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Resolves plugin dependencies using topological sort
+/// Resolves module dependencies using topological sort
 /// </summary>
-public class PluginDependencyResolver
+public class ModuleDependencyResolver
 {
-    private readonly ILogger<PluginDependencyResolver> _logger;
+    private readonly ILogger<ModuleDependencyResolver> _logger;
 
-    public PluginDependencyResolver(ILogger<PluginDependencyResolver> logger)
+    public ModuleDependencyResolver(ILogger<ModuleDependencyResolver> logger)
     {
         _logger = logger;
     }
 
     /// <summary>
-    /// Resolve plugin load order based on dependencies and categories
+    /// Resolve module load order based on dependencies and categories
     /// Throws if circular dependencies detected
     /// </summary>
-    public List<IAgPlugin> ResolveLoadOrder(List<IAgPlugin> plugins)
+    public List<IAgModule> ResolveLoadOrder(List<IAgModule> plugins)
     {
         if (!plugins.Any())
         {
-            return new List<IAgPlugin>();
+            return new List<IAgModule>();
         }
 
         // Build dependency graph
@@ -46,21 +46,21 @@ public class PluginDependencyResolver
             .ThenBy(p => (int)p.Category)
             .ToList();
 
-        _logger.LogInformation($"Resolved plugin load order: {string.Join(" -> ", result.Select(p => p.Name))}");
+        _logger.LogInformation($"Resolved module load order: {string.Join(" -> ", result.Select(p => p.Name))}");
 
         return result;
     }
 
-    private Dictionary<string, DependencyNode> BuildDependencyGraph(List<IAgPlugin> plugins)
+    private Dictionary<string, DependencyNode> BuildDependencyGraph(List<IAgModule> plugins)
     {
         var graph = new Dictionary<string, DependencyNode>(StringComparer.OrdinalIgnoreCase);
 
         // Create nodes
-        foreach (var plugin in plugins)
+        foreach (var module in plugins)
         {
             graph[plugin.Name] = new DependencyNode
             {
-                Plugin = plugin,
+                Module = plugin,
                 Dependencies = new List<string>(plugin.Dependencies)
             };
         }
@@ -73,7 +73,7 @@ public class PluginDependencyResolver
                 if (!graph.ContainsKey(dep))
                 {
                     throw new InvalidOperationException(
-                        $"Plugin '{node.Plugin.Name}' depends on '{dep}', but '{dep}' is not available");
+                        $"Module '{node.Plugin.Name}' depends on '{dep}', but '{dep}' is not available");
                 }
             }
         }
@@ -129,9 +129,9 @@ public class PluginDependencyResolver
         recursionStack.Remove(node);
     }
 
-    private List<IAgPlugin> TopologicalSort(Dictionary<string, DependencyNode> graph)
+    private List<IAgModule> TopologicalSort(Dictionary<string, DependencyNode> graph)
     {
-        var sorted = new List<IAgPlugin>();
+        var sorted = new List<IAgModule>();
         var visited = new HashSet<string>();
 
         foreach (var node in graph.Keys)
@@ -149,7 +149,7 @@ public class PluginDependencyResolver
         string node,
         Dictionary<string, DependencyNode> graph,
         HashSet<string> visited,
-        List<IAgPlugin> sorted)
+        List<IAgModule> sorted)
     {
         visited.Add(node);
 
@@ -166,7 +166,7 @@ public class PluginDependencyResolver
         sorted.Add(graph[node].Plugin);
     }
 
-    private int GetDependencyLevel(IAgPlugin plugin, Dictionary<string, DependencyNode> graph)
+    private int GetDependencyLevel(IAgModule plugin, Dictionary<string, DependencyNode> graph)
     {
         if (!graph.TryGetValue(plugin.Name, out var node))
         {
@@ -192,7 +192,7 @@ public class PluginDependencyResolver
 
     private class DependencyNode
     {
-        public required IAgPlugin Plugin { get; set; }
+        public required IAgModule Module { get; set; }
         public required List<string> Dependencies { get; set; }
     }
 }
