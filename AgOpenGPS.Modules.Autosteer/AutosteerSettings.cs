@@ -1,11 +1,11 @@
-namespace AgOpenGPS.Plugins.Autosteer;
+namespace AgOpenGPS.Modules.Autosteer;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 
 /// <summary>
 /// Settings for the Autosteer plugin
 /// </summary>
-public class AutosteerSettings : IPluginSettings
+public class AutosteerSettings : IModuleSettings
 {
     public string SettingsId => "Autosteer";
 

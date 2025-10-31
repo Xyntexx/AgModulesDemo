@@ -1,8 +1,8 @@
-namespace AgOpenGPS.Plugins.DummyIO;
+namespace AgOpenGPS.Modules.DummyIO;
 
 using System.Text;
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 
@@ -10,11 +10,11 @@ using System.Globalization;
 /// Dummy IO plugin with simple vehicle simulation
 /// Simulates a vehicle that responds to steer commands and generates GPS data
 /// </summary>
-public class DummyIOPlugin : IAgPlugin
+public class DummyIOPlugin : IAgModule
 {
     public string Name => "Dummy IO Simulator";
     public Version Version => new Version(1, 0, 0);
-    public PluginCategory Category => PluginCategory.IO;
+    public ModuleCategory Category => ModuleCategory.IO;
     public string[] Dependencies => Array.Empty<string>();
 
     private IMessageBus? _messageBus;
@@ -35,7 +35,7 @@ public class DummyIOPlugin : IAgPlugin
     private const double WheelBase = 2.5;      // meters (typical tractor wheelbase)
     private const double DegreesToMeters = 111320.0; // Approximate at equator
 
-    public Task InitializeAsync(IPluginContext context)
+    public Task InitializeAsync(IModuleContext context)
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
@@ -63,7 +63,7 @@ public class DummyIOPlugin : IAgPlugin
     }
 
     public Task ShutdownAsync() => Task.CompletedTask;
-    public PluginHealth GetHealth() => PluginHealth.Healthy;
+    public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     /// <summary>
     /// Main simulation loop - updates vehicle state and publishes GPS data

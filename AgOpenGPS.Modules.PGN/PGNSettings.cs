@@ -1,11 +1,11 @@
-namespace AgOpenGPS.Plugins.PGN;
+namespace AgOpenGPS.Modules.PGN;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 
 /// <summary>
 /// Settings for the PGN Translator plugin
 /// </summary>
-public class PGNSettings : IPluginSettings
+public class PGNSettings : IModuleSettings
 {
     public string SettingsId => "PGN";
 

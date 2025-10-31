@@ -1,11 +1,11 @@
-namespace AgOpenGPS.Plugins.DummyIO;
+namespace AgOpenGPS.Modules.DummyIO;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 
 /// <summary>
 /// Settings for the Dummy IO Simulator plugin
 /// </summary>
-public class DummyIOSettings : IPluginSettings
+public class DummyIOSettings : IModuleSettings
 {
     public string SettingsId => "DummyIO";
 

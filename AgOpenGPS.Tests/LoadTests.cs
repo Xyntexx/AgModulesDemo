@@ -125,10 +125,10 @@ public class LoadTests
         Assert.Equal(modules.Length + 1, loadedModules.Count); // +1 for monitoring module
 
         var health = await core.PerformHealthCheckAsync();
-        foreach (var moduleHealth in health.PluginHealths)
+        foreach (var moduleHealth in health.ModuleHealths)
         {
             Assert.NotEqual(ModuleHealth.Unhealthy, moduleHealth.Health);
-            _output.WriteLine($"  {moduleHealth.PluginName}: {moduleHealth.Health}");
+            _output.WriteLine($"  {moduleHealth.ModuleName}: {moduleHealth.Health}");
         }
 
         var metrics = monitor.GetSystemMetrics();

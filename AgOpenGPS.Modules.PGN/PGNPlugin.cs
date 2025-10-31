@@ -1,25 +1,25 @@
-namespace AgOpenGPS.Plugins.PGN;
+namespace AgOpenGPS.Modules.PGN;
 
 using System.Text;
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Bidirectional PGN translator
 /// Parses incoming PGN messages and encodes outgoing commands
 /// </summary>
-public class PGNPlugin : IAgPlugin
+public class PGNPlugin : IAgModule
 {
     public string Name => "PGN Translator";
     public Version Version => new Version(1, 0, 0);
-    public PluginCategory Category => PluginCategory.DataProcessing;
+    public ModuleCategory Category => ModuleCategory.DataProcessing;
     public string[] Dependencies => new[] { "Serial IO" };
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
 
-    public Task InitializeAsync(IPluginContext context)
+    public Task InitializeAsync(IModuleContext context)
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
@@ -38,7 +38,7 @@ public class PGNPlugin : IAgPlugin
     public Task StartAsync() => Task.CompletedTask;
     public Task StopAsync() => Task.CompletedTask;
     public Task ShutdownAsync() => Task.CompletedTask;
-    public PluginHealth GetHealth() => PluginHealth.Healthy;
+    public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     // INBOUND: Parse received data
     private void ParseIncomingData(RawDataReceivedMessage raw)

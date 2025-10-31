@@ -15,19 +15,19 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AgOpenGPS.Core\AgOpenGPS.Core.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.PluginContracts\AgOpenGPS.PluginContracts.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.ModuleContracts\AgOpenGPS.ModuleContracts.csproj" />
     <ProjectReference Include="..\AgOpenGPS.Modules.Monitoring\AgOpenGPS.Modules.Monitoring.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.DummyIO\AgOpenGPS.Plugins.DummyIO.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.PGN\AgOpenGPS.Plugins.PGN.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.Autosteer\AgOpenGPS.Plugins.Autosteer.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.DummyIO\AgOpenGPS.Modules.DummyIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.PGN\AgOpenGPS.Modules.PGN.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.Autosteer\AgOpenGPS.Modules.Autosteer.csproj" />
   </ItemGroup>
 
 </Project>

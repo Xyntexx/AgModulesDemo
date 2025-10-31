@@ -275,13 +275,13 @@ public class CrashResilienceTests
 
         // Assert
         Assert.False(unloadResult.Success, "Should not allow unloading module with dependents");
-        Assert.NotNull(unloadResult.DependentPlugins);
-        Assert.NotEmpty(unloadResult.DependentPlugins);
+        Assert.NotNull(unloadResult.DependentModules);
+        Assert.NotEmpty(unloadResult.DependentModules);
 
         _output.WriteLine($"Dependent Module Test:");
         _output.WriteLine($"  Unload prevented: {!unloadResult.Success}");
         _output.WriteLine($"  Error: {unloadResult.ErrorMessage}");
-        _output.WriteLine($"  Dependents: {string.Join(", ", unloadResult.DependentPlugins ?? new List<string>())}");
+        _output.WriteLine($"  Dependents: {string.Join(", ", unloadResult.DependentModules ?? new List<string>())}");
 
         // Cleanup
         await core.StopAsync();

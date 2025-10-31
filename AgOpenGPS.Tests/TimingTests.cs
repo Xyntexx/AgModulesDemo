@@ -208,7 +208,7 @@ public class TimingTests
         services.AddLogging(builder =>
         {
             builder.AddConsole();
-            builder.AddDebug();
+            
             builder.SetMinimumLevel(LogLevel.Information);
         });
 

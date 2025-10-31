@@ -1,11 +1,11 @@
-namespace AgOpenGPS.Plugins.SerialIO;
+namespace AgOpenGPS.Modules.SerialIO;
 
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 
 /// <summary>
 /// Settings for the Serial IO plugin
 /// </summary>
-public class SerialIOSettings : IPluginSettings
+public class SerialIOSettings : IModuleSettings
 {
     public string SettingsId => "SerialIO";
 

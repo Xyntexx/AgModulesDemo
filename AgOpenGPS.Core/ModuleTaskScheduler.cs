@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class ModuleTaskScheduler
 {
-    private readonly ConcurrentDictionary<string, ModuleThreadPool> _pluginThreadPools = new();
+    private readonly ConcurrentDictionary<string, ModuleThreadPool> _moduleThreadPools = new();
     private readonly ILogger<ModuleTaskScheduler> _logger;
 
     public ModuleTaskScheduler(ILogger<ModuleTaskScheduler> logger)
@@ -20,12 +20,12 @@ public class ModuleTaskScheduler
     /// <summary>
     /// Execute a module operation on its dedicated thread pool
     /// </summary>
-    public async Task<T> ExecuteOnPluginThreadAsync<T>(
+    public async Task<T> ExecuteOnModuleThreadAsync<T>(
         string moduleId,
         Func<Task<T>> operation,
         CancellationToken cancellationToken = default)
     {
-        var threadPool = _pluginThreadPools.GetOrAdd(moduleId, id => new ModuleThreadPool(id, _logger));
+        var threadPool = _moduleThreadPools.GetOrAdd(moduleId, id => new ModuleThreadPool(id, _logger));
 
         var tcs = new TaskCompletionSource<T>();
 
@@ -53,12 +53,12 @@ public class ModuleTaskScheduler
     /// <summary>
     /// Execute a module operation on its dedicated thread pool (void return)
     /// </summary>
-    public async Task ExecuteOnPluginThreadAsync(
+    public async Task ExecuteOnModuleThreadAsync(
         string moduleId,
         Func<Task> operation,
         CancellationToken cancellationToken = default)
     {
-        await ExecuteOnPluginThreadAsync<object>(moduleId, async () =>
+        await ExecuteOnModuleThreadAsync<object>(moduleId, async () =>
         {
             await operation();
             return null!;
@@ -68,20 +68,20 @@ public class ModuleTaskScheduler
     /// <summary>
     /// Execute a synchronous module operation on its dedicated thread
     /// </summary>
-    public async Task<T> ExecuteOnPluginThread<T>(
+    public async Task<T> ExecuteOnModuleThread<T>(
         string moduleId,
         Func<T> operation,
         CancellationToken cancellationToken = default)
     {
-        return await ExecuteOnPluginThreadAsync(moduleId, () => Task.FromResult(operation()), cancellationToken);
+        return await ExecuteOnModuleThreadAsync(moduleId, () => Task.FromResult(operation()), cancellationToken);
     }
 
     /// <summary>
     /// Cleanup thread pool for a plugin
     /// </summary>
-    public void CleanupPlugin(string moduleId)
+    public void CleanupModule(string moduleId)
     {
-        if (_pluginThreadPools.TryRemove(moduleId, out var threadPool))
+        if (_moduleThreadPools.TryRemove(moduleId, out var threadPool))
         {
             threadPool.Dispose();
             _logger.LogDebug($"Cleaned up thread pool for module {moduleId}");
@@ -93,7 +93,7 @@ public class ModuleTaskScheduler
     /// </summary>
     public Dictionary<string, ModuleThreadPoolStats> GetStatistics()
     {
-        return _pluginThreadPools.ToDictionary(
+        return _moduleThreadPools.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.GetStats());
     }

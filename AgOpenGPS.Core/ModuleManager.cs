@@ -37,48 +37,48 @@ public class ModuleManager : IDisposable
         _watchdog = new ModuleWatchdog(services.GetRequiredService<ILogger<ModuleWatchdog>>());
 
         // Subscribe to hang detection events
-        _watchdog.ModuleHangDetected += OnPluginHangDetected;
+        _watchdog.ModuleHangDetected += OnModuleHangDetected;
     }
 
-    private void OnPluginHangDetected(object? sender, PluginHangDetectedEventArgs e)
+    private void OnModuleHangDetected(object? sender, ModuleHangDetectedEventArgs e)
     {
         _logger.LogCritical(
-            $"PLUGIN HANG DETECTED: {e.ModuleId} - Operation '{e.OperationName}' running for {e.Duration.TotalSeconds:F1}s on thread {e.ThreadId}");
+            $"MODULE HANG DETECTED: {e.ModuleId} - Operation '{e.OperationName}' running for {e.Duration.TotalSeconds:F1}s on thread {e.ThreadId}");
 
-        // Optionally auto-reload the hanging plugin
-        // await ReloadPluginAsync(e.ModuleId);
+        // Optionally auto-reload the hanging module
+        // await ReloadModuleAsync(e.ModuleId);
     }
 
     /// <summary>
     /// Load a module and initialize it
     /// </summary>
-    public async Task<ModuleLoadResult> LoadPluginAsync(IAgModule plugin, CancellationToken cancellationToken = default)
+    public async Task<ModuleLoadResult> LoadModuleAsync(IAgModule module, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
 
         await _lifecycleLock.WaitAsync(cancellationToken);
         try
         {
-            var moduleId = GetModuleId(plugin);
+            var moduleId = GetModuleId(module);
 
             // Check if already loaded
             if (_modules.ContainsKey(moduleId))
             {
-                _logger.LogWarning($"Module {plugin.Name} is already loaded");
+                _logger.LogWarning($"Module {module.Name} is already loaded");
                 return ModuleLoadResult.AlreadyLoaded(moduleId);
             }
 
             // Check dependencies
-            var missingDeps = CheckDependencies(plugin);
+            var missingDeps = CheckDependencies(module);
             if (missingDeps.Any())
             {
-                _logger.LogError($"Module {plugin.Name} has missing dependencies: {string.Join(", ", missingDeps)}");
+                _logger.LogError($"Module {module.Name} has missing dependencies: {string.Join(", ", missingDeps)}");
                 return ModuleLoadResult.CreateMissingDependencies(moduleId, missingDeps);
             }
 
             var registration = new ModuleRegistration
             {
-                Module = plugin,
+                Module = module,
                 ModuleId = moduleId,
                 State = ModuleState.Loading,
                 LoadedAt = DateTimeOffset.UtcNow
@@ -98,20 +98,20 @@ public class ModuleManager : IDisposable
 
                 registration.Context = context;
 
-                _logger.LogInformation($"Initializing plugin: {plugin.Name} v{plugin.Version}");
+                _logger.LogInformation($"Initializing module: {module.Name} v{module.Version}");
 
                 // Initialize with comprehensive exception handling on dedicated thread
                 registration.State = ModuleState.Initializing;
-                var initResult = await _taskScheduler.ExecuteOnPluginThreadAsync(
+                var initResult = await _taskScheduler.ExecuteOnModuleThreadAsync(
                     moduleId,
                     async () =>
                     {
                         using var monitor = _watchdog.MonitorOperation(moduleId, "InitializeAsync");
-                        return await SafePluginExecutor.ExecuteWithTimeoutAsync(
-                            () => plugin.InitializeAsync(context),
+                        return await SafeModuleExecutor.ExecuteWithTimeoutAsync(
+                            () => module.InitializeAsync(context),
                             TimeSpan.FromSeconds(30),
                             "InitializeAsync",
-                            plugin.Name,
+                            module.Name,
                             _logger);
                     });
 
@@ -122,16 +122,16 @@ public class ModuleManager : IDisposable
 
                 // Start with comprehensive exception handling on dedicated thread
                 registration.State = ModuleState.Starting;
-                var startResult = await _taskScheduler.ExecuteOnPluginThreadAsync(
+                var startResult = await _taskScheduler.ExecuteOnModuleThreadAsync(
                     moduleId,
                     async () =>
                     {
                         using var monitor = _watchdog.MonitorOperation(moduleId, "StartAsync");
-                        return await SafePluginExecutor.ExecuteWithTimeoutAsync(
-                            () => plugin.StartAsync(),
+                        return await SafeModuleExecutor.ExecuteWithTimeoutAsync(
+                            () => module.StartAsync(),
                             TimeSpan.FromSeconds(30),
                             "StartAsync",
-                            plugin.Name,
+                            module.Name,
                             _logger);
                     });
 
@@ -145,14 +145,14 @@ public class ModuleManager : IDisposable
 
                 _modules[moduleId] = registration;
 
-                _logger.LogInformation($"Module {plugin.Name} loaded successfully");
+                _logger.LogInformation($"Module {module.Name} loaded successfully");
 
                 // Publish module loaded event
-                _messageBus.Publish(new PluginLoadedEvent
+                _messageBus.Publish(new ModuleLoadedEvent
                 {
                     ModuleId = moduleId,
-                    PluginName = plugin.Name,
-                    Version = plugin.Version.ToString(),
+                    ModuleName = module.Name,
+                    Version = module.Version.ToString(),
                     TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 });
 
@@ -160,7 +160,7 @@ public class ModuleManager : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to load module {plugin.Name}");
+                _logger.LogError(ex, $"Failed to load module {module.Name}");
                 registration.State = ModuleState.Failed;
                 registration.LastError = ex.Message;
 
@@ -182,7 +182,7 @@ public class ModuleManager : IDisposable
     /// <summary>
     /// Unload a module by ID
     /// </summary>
-    public async Task<ModuleUnloadResult> UnloadPluginAsync(string moduleId, CancellationToken cancellationToken = default)
+    public async Task<ModuleUnloadResult> UnloadModuleAsync(string moduleId, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
 
@@ -195,21 +195,21 @@ public class ModuleManager : IDisposable
                 return ModuleUnloadResult.NotFound(moduleId);
             }
 
-            // Check if other plugins depend on this one
-            var dependents = GetDependentPlugins(moduleId);
+            // Check if other modules depend on this one
+            var dependents = GetDependentModules(moduleId);
             if (dependents.Any())
             {
-                _logger.LogError($"Cannot unload {moduleId}, other plugins depend on it: {string.Join(", ", dependents)}");
+                _logger.LogError($"Cannot unload {moduleId}, other modules depend on it: {string.Join(", ", dependents)}");
                 return ModuleUnloadResult.HasDependents(moduleId, dependents);
             }
 
             try
             {
-                _logger.LogInformation($"Unloading plugin: {registration.Module.Name}");
+                _logger.LogInformation($"Unloading module: {registration.Module.Name}");
 
                 // Stop with comprehensive exception handling and timeout
                 registration.State = ModuleState.Stopping;
-                var stopResult = await SafePluginExecutor.ExecuteWithTimeoutAsync(
+                var stopResult = await SafeModuleExecutor.ExecuteWithTimeoutAsync(
                     () => registration.Module.StopAsync(),
                     TimeSpan.FromSeconds(10),
                     "StopAsync",
@@ -223,7 +223,7 @@ public class ModuleManager : IDisposable
 
                 // Shutdown with comprehensive exception handling and timeout
                 registration.State = ModuleState.ShuttingDown;
-                var shutdownResult = await SafePluginExecutor.ExecuteWithTimeoutAsync(
+                var shutdownResult = await SafeModuleExecutor.ExecuteWithTimeoutAsync(
                     () => registration.Module.ShutdownAsync(),
                     TimeSpan.FromSeconds(10),
                     "ShutdownAsync",
@@ -240,7 +240,7 @@ public class ModuleManager : IDisposable
 
                 // Cleanup monitoring and task scheduler
                 _watchdog.StopMonitoring(moduleId);
-                _taskScheduler.CleanupPlugin(moduleId);
+                _taskScheduler.CleanupModule(moduleId);
 
                 registration.State = ModuleState.Unloaded;
 
@@ -249,10 +249,10 @@ public class ModuleManager : IDisposable
                 _logger.LogInformation($"Module {registration.Module.Name} unloaded successfully");
 
                 // Publish module unloaded event
-                _messageBus.Publish(new PluginUnloadedEvent
+                _messageBus.Publish(new ModuleUnloadedEvent
                 {
                     ModuleId = moduleId,
-                    PluginName = registration.Module.Name,
+                    ModuleName = registration.Module.Name,
                     TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 });
 
@@ -275,7 +275,7 @@ public class ModuleManager : IDisposable
     /// <summary>
     /// Reload a module (unload then load)
     /// </summary>
-    public async Task<ModuleReloadResult> ReloadPluginAsync(string moduleId, CancellationToken cancellationToken = default)
+    public async Task<ModuleReloadResult> ReloadModuleAsync(string moduleId, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
 
@@ -286,13 +286,13 @@ public class ModuleManager : IDisposable
 
         var module = registration.Module;
 
-        var unloadResult = await UnloadPluginAsync(moduleId, cancellationToken);
+        var unloadResult = await UnloadModuleAsync(moduleId, cancellationToken);
         if (!unloadResult.Success)
         {
             return ModuleReloadResult.UnloadFailed(moduleId, unloadResult.ErrorMessage);
         }
 
-        var loadResult = await LoadPluginAsync(plugin, cancellationToken);
+        var loadResult = await LoadModuleAsync(module, cancellationToken);
         if (!loadResult.Success)
         {
             return ModuleReloadResult.LoadFailed(moduleId, loadResult.ErrorMessage);
@@ -310,9 +310,9 @@ public class ModuleManager : IDisposable
     }
 
     /// <summary>
-    /// Get all loaded plugins
+    /// Get all loaded modules
     /// </summary>
-    public IReadOnlyList<ModuleInfo> GetLoadedPlugins()
+    public IReadOnlyList<ModuleInfo> GetLoadedModules()
     {
         return _modules.Values.Select(r => new ModuleInfo
         {
@@ -329,7 +329,7 @@ public class ModuleManager : IDisposable
     }
 
     /// <summary>
-    /// Perform health check on all plugins
+    /// Perform health check on all modules
     /// </summary>
     public async Task<HealthCheckResult> PerformHealthCheckAsync()
     {
@@ -338,7 +338,7 @@ public class ModuleManager : IDisposable
         foreach (var reg in _modules.Values)
         {
             // Use safe executor with timeout for health checks
-            var healthResult = await SafePluginExecutor.ExecuteWithTimeoutAsync(
+            var healthResult = await SafeModuleExecutor.ExecuteWithTimeoutAsync(
                 async () =>
                 {
                     var health = await Task.Run(() => reg.Module.GetHealth());
@@ -347,12 +347,12 @@ public class ModuleManager : IDisposable
                     results.Add(new ModuleHealthInfo
                     {
                         ModuleId = reg.ModuleId,
-                        PluginName = reg.Module.Name,
+                        ModuleName = reg.Module.Name,
                         Health = health,
                         State = reg.State
                     });
 
-                    if (health == PluginHealth.Unhealthy)
+                    if (health == ModuleHealth.Unhealthy)
                     {
                         _logger.LogWarning($"Module {reg.Module.Name} reported unhealthy status");
                     }
@@ -368,8 +368,8 @@ public class ModuleManager : IDisposable
                 results.Add(new ModuleHealthInfo
                 {
                     ModuleId = reg.ModuleId,
-                    PluginName = reg.Module.Name,
-                    Health = PluginHealth.Unknown,
+                    ModuleName = reg.Module.Name,
+                    Health = ModuleHealth.Unknown,
                     State = reg.State,
                     Error = healthResult.ErrorMessage
                 });
@@ -379,26 +379,26 @@ public class ModuleManager : IDisposable
         return new HealthCheckResult
         {
             CheckedAt = DateTimeOffset.UtcNow,
-            PluginHealths = results
+            ModuleHealths = results
         };
     }
 
     /// <summary>
-    /// Shutdown all plugins
+    /// Shutdown all modules
     /// </summary>
     public async Task ShutdownAllAsync()
     {
         _shutdownCts.Cancel();
 
-        var pluginsToShutdown = _modules.Values
+        var modulesToShutdown = _modules.Values
             .OrderByDescending(r => (int)r.Module.Category) // Reverse category order
             .ToList();
 
-        foreach (var reg in pluginsToShutdown)
+        foreach (var reg in modulesToShutdown)
         {
             try
             {
-                await UnloadPluginAsync(reg.ModuleId);
+                await UnloadModuleAsync(reg.ModuleId);
             }
             catch (Exception ex)
             {
@@ -407,16 +407,16 @@ public class ModuleManager : IDisposable
         }
     }
 
-    private string GetModuleId(IAgModule plugin)
+    private string GetModuleId(IAgModule module)
     {
-        return $"{plugin.Name}:{plugin.Version}".Replace(" ", "_");
+        return $"{module.Name}:{module.Version}".Replace(" ", "_");
     }
 
-    private List<string> CheckDependencies(IAgModule plugin)
+    private List<string> CheckDependencies(IAgModule module)
     {
         var missing = new List<string>();
 
-        foreach (var dep in plugin.Dependencies)
+        foreach (var dep in module.Dependencies)
         {
             var found = _modules.Values.Any(r =>
                 r.Module.Name.Equals(dep, StringComparison.OrdinalIgnoreCase) &&
@@ -431,7 +431,7 @@ public class ModuleManager : IDisposable
         return missing;
     }
 
-    private List<string> GetDependentPlugins(string moduleId)
+    private List<string> GetDependentModules(string moduleId)
     {
         if (!_modules.TryGetValue(moduleId, out var targetReg))
         {
@@ -464,7 +464,7 @@ public class ModuleManager : IDisposable
     /// <summary>
     /// Get watchdog monitoring statistics
     /// </summary>
-    public List<PluginMonitorStats> GetWatchdogStats()
+    public List<ModuleMonitorStats> GetWatchdogStats()
     {
         return _watchdog.GetStatistics();
     }
@@ -484,7 +484,7 @@ public class ModuleManager : IDisposable
 /// <summary>
 /// Scoped module context that tracks subscriptions
 /// </summary>
-internal class ScopedModuleContext : IPluginContext
+internal class ScopedModuleContext : IModuleContext
 {
     private readonly MessageBus _messageBus;
     private readonly string _scope;
@@ -578,9 +578,9 @@ public class ModuleInfo
     public required string ModuleId { get; set; }
     public required string Name { get; set; }
     public required string Version { get; set; }
-    public PluginCategory Category { get; set; }
+    public ModuleCategory Category { get; set; }
     public ModuleState State { get; set; }
-    public PluginHealth Health { get; set; }
+    public ModuleHealth Health { get; set; }
     public DateTimeOffset LoadedAt { get; set; }
     public DateTimeOffset LastHealthCheck { get; set; }
     public string? LastError { get; set; }
@@ -612,7 +612,7 @@ public class ModuleUnloadResult
     public bool Success { get; set; }
     public required string ModuleId { get; set; }
     public string? ErrorMessage { get; set; }
-    public List<string>? DependentPlugins { get; set; }
+    public List<string>? DependentModules { get; set; }
 
     public static ModuleUnloadResult CreateSuccess(string moduleId) =>
         new() { Success = true, ModuleId = moduleId };
@@ -624,7 +624,7 @@ public class ModuleUnloadResult
         new() { Success = false, ModuleId = moduleId, ErrorMessage = error };
 
     public static ModuleUnloadResult HasDependents(string moduleId, List<string> dependents) =>
-        new() { Success = false, ModuleId = moduleId, DependentPlugins = dependents, ErrorMessage = "Has dependent plugins" };
+        new() { Success = false, ModuleId = moduleId, DependentModules = dependents, ErrorMessage = "Has dependent modules" };
 }
 
 public class ModuleReloadResult
@@ -649,14 +649,14 @@ public class ModuleReloadResult
 public class HealthCheckResult
 {
     public DateTimeOffset CheckedAt { get; set; }
-    public required List<ModuleHealthInfo> PluginHealths { get; set; }
+    public required List<ModuleHealthInfo> ModuleHealths { get; set; }
 }
 
 public class ModuleHealthInfo
 {
     public required string ModuleId { get; set; }
-    public required string PluginName { get; set; }
-    public PluginHealth Health { get; set; }
+    public required string ModuleName { get; set; }
+    public ModuleHealth Health { get; set; }
     public ModuleState State { get; set; }
     public string? Error { get; set; }
 }

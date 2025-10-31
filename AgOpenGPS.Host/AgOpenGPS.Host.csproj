@@ -3,12 +3,12 @@
   <ItemGroup>
     <ProjectReference Include="..\AgOpenGPS.Core\AgOpenGPS.Core.csproj" />
     <!-- Plugin project references - these will be built automatically -->
-    <ProjectReference Include="..\AgOpenGPS.Plugins.Autosteer\AgOpenGPS.Plugins.Autosteer.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.DummyIO\AgOpenGPS.Plugins.DummyIO.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.Kinematics\AgOpenGPS.Plugins.Kinematics.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.PGN\AgOpenGPS.Plugins.PGN.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.SerialIO\AgOpenGPS.Plugins.SerialIO.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Plugins.UI\AgOpenGPS.Plugins.UI.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.Autosteer\AgOpenGPS.Modules.Autosteer.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.DummyIO\AgOpenGPS.Modules.DummyIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.Kinematics\AgOpenGPS.Modules.Kinematics.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.PGN\AgOpenGPS.Modules.PGN.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.SerialIO\AgOpenGPS.Modules.SerialIO.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.UI\AgOpenGPS.Modules.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,14 +32,14 @@
   <Target Name="CopyPlugins" AfterTargets="Build">
     <MakeDir Directories="$(OutputPath)plugins" />
     <ItemGroup>
-      <PluginFiles Include="..\AgOpenGPS.Plugins.Autosteer\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.Autosteer.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Plugins.DummyIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.DummyIO.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Plugins.Kinematics\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.Kinematics.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Plugins.PGN\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.PGN.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Plugins.SerialIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.SerialIO.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Plugins.UI\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Plugins.UI.dll" />
-      <!-- Also copy PluginContracts to plugins folder so plugins can find it -->
-      <PluginFiles Include="..\AgOpenGPS.PluginContracts\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.PluginContracts.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.Autosteer\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.Autosteer.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.DummyIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.DummyIO.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.Kinematics\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.Kinematics.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.PGN\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.PGN.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.SerialIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.SerialIO.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.UI\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.UI.dll" />
+      <!-- Also copy ModuleContracts to plugins folder so plugins can find it -->
+      <PluginFiles Include="..\AgOpenGPS.ModuleContracts\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.ModuleContracts.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(OutputPath)plugins" SkipUnchangedFiles="true" />
     <Message Text="Copied plugin DLLs to $(OutputPath)plugins" Importance="high" />

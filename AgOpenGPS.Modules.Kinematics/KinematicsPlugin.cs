@@ -1,18 +1,18 @@
-namespace AgOpenGPS.Plugins.Kinematics;
+namespace AgOpenGPS.Modules.Kinematics;
 
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Kinematics plugin - calculates heading from position changes
 /// Enriches GPS data with calculated heading based on movement
 /// </summary>
-public class KinematicsPlugin : IAgPlugin
+public class KinematicsPlugin : IAgModule
 {
     public string Name => "Kinematics";
     public Version Version => new Version(1, 0, 0);
-    public PluginCategory Category => PluginCategory.DataProcessing;
+    public ModuleCategory Category => ModuleCategory.DataProcessing;
     public string[] Dependencies => new[] { "PGN Translator" };
 
     private IMessageBus? _messageBus;
@@ -24,7 +24,7 @@ public class KinematicsPlugin : IAgPlugin
     private bool _hasHistory;
     private double _calculatedHeading;
 
-    public Task InitializeAsync(IPluginContext context)
+    public Task InitializeAsync(IModuleContext context)
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
@@ -44,7 +44,7 @@ public class KinematicsPlugin : IAgPlugin
 
     public Task StopAsync() => Task.CompletedTask;
     public Task ShutdownAsync() => Task.CompletedTask;
-    public PluginHealth GetHealth() => PluginHealth.Healthy;
+    public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     private void OnGpsPosition(GpsPositionMessage msg)
     {

@@ -1,9 +1,9 @@
-namespace AgOpenGPS.Plugins.SerialIO;
+namespace AgOpenGPS.Modules.SerialIO;
 
 using System.Collections.Concurrent;
 using System.IO.Ports;
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -11,11 +11,11 @@ using Microsoft.Extensions.Logging;
 /// Bidirectional Serial/UDP communication plugin
 /// Receives data from hardware and sends control commands
 /// </summary>
-public class SerialIOPlugin : IAgPlugin
+public class SerialIOPlugin : IAgModule
 {
     public string Name => "Serial IO";
     public Version Version => new Version(1, 0, 0);
-    public PluginCategory Category => PluginCategory.IO;
+    public ModuleCategory Category => ModuleCategory.IO;
     public string[] Dependencies => Array.Empty<string>();
 
     private SerialPort? _serialPort;
@@ -25,7 +25,7 @@ public class SerialIOPlugin : IAgPlugin
     private CancellationToken _shutdownToken;
     private Task? _sendTask;
 
-    public Task InitializeAsync(IPluginContext context)
+    public Task InitializeAsync(IModuleContext context)
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
@@ -84,9 +84,9 @@ public class SerialIOPlugin : IAgPlugin
         return Task.CompletedTask;
     }
 
-    public PluginHealth GetHealth()
+    public ModuleHealth GetHealth()
     {
-        return _serialPort?.IsOpen == true ? PluginHealth.Healthy : PluginHealth.Unhealthy;
+        return _serialPort?.IsOpen == true ? ModuleHealth.Healthy : ModuleHealth.Unhealthy;
     }
 
     // INBOUND: Data received from hardware

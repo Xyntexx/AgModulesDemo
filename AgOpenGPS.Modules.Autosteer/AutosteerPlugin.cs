@@ -1,18 +1,18 @@
-namespace AgOpenGPS.Plugins.Autosteer;
+namespace AgOpenGPS.Modules.Autosteer;
 
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Autosteer control plugin
 /// Calculates steering commands based on GPS and guidance
 /// </summary>
-public class AutosteerPlugin : IAgPlugin, IConfigurablePlugin
+public class AutosteerPlugin : IAgModule, IConfigurableModule
 {
     public string Name => "Autosteer";
     public Version Version => new Version(1, 0, 0);
-    public PluginCategory Category => PluginCategory.Control;
+    public ModuleCategory Category => ModuleCategory.Control;
     public string[] Dependencies => new[] { "PGN Translator" };
 
     private IMessageBus? _messageBus;
@@ -28,7 +28,7 @@ public class AutosteerPlugin : IAgPlugin, IConfigurablePlugin
     // Settings
     private AutosteerSettings _settings = new AutosteerSettings();
 
-    public Task InitializeAsync(IPluginContext context)
+    public Task InitializeAsync(IModuleContext context)
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
@@ -76,7 +76,7 @@ public class AutosteerPlugin : IAgPlugin, IConfigurablePlugin
     }
 
     public Task ShutdownAsync() => Task.CompletedTask;
-    public PluginHealth GetHealth() => PluginHealth.Healthy;
+    public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     private void OnGpsPosition(GpsPositionMessage msg)
     {
@@ -137,13 +137,13 @@ public class AutosteerPlugin : IAgPlugin, IConfigurablePlugin
         _logger?.LogDebug($"Steer: Error={error:F2}°, Command={steerAngle:F2}°");
     }
 
-    // IConfigurablePlugin implementation
-    public IPluginSettings GetSettings()
+    // IConfigurableModule implementation
+    public IModuleSettings GetSettings()
     {
         return _settings;
     }
 
-    public void UpdateSettings(IPluginSettings settings)
+    public void UpdateSettings(IModuleSettings settings)
     {
         if (settings is AutosteerSettings autosteerSettings)
         {

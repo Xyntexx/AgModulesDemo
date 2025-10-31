@@ -58,10 +58,10 @@ public class ModuleDependencyResolver
         // Create nodes
         foreach (var module in plugins)
         {
-            graph[plugin.Name] = new DependencyNode
+            graph[module.Name] = new DependencyNode
             {
-                Module = plugin,
-                Dependencies = new List<string>(plugin.Dependencies)
+                Module = module,
+                Dependencies = new List<string>(module.Dependencies)
             };
         }
 
@@ -73,7 +73,7 @@ public class ModuleDependencyResolver
                 if (!graph.ContainsKey(dep))
                 {
                     throw new InvalidOperationException(
-                        $"Module '{node.Plugin.Name}' depends on '{dep}', but '{dep}' is not available");
+                        $"Module '{node.Module.Name}' depends on '{dep}', but '{dep}' is not available");
                 }
             }
         }
@@ -163,7 +163,7 @@ public class ModuleDependencyResolver
         }
 
         // Add to sorted list after all dependencies
-        sorted.Add(graph[node].Plugin);
+        sorted.Add(graph[node].Module);
     }
 
     private int GetDependencyLevel(IAgModule plugin, Dictionary<string, DependencyNode> graph)
@@ -183,7 +183,7 @@ public class ModuleDependencyResolver
         {
             if (graph.TryGetValue(dep, out var depNode))
             {
-                maxDepLevel = Math.Max(maxDepLevel, GetDependencyLevel(depNode.Plugin, graph) + 1);
+                maxDepLevel = Math.Max(maxDepLevel, GetDependencyLevel(depNode.Module, graph) + 1);
             }
         }
 

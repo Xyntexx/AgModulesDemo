@@ -1,27 +1,27 @@
-namespace AgOpenGPS.Plugins.UI;
+namespace AgOpenGPS.Modules.UI;
 
 using System.Text.Json;
-using AgOpenGPS.PluginContracts;
-using AgOpenGPS.PluginContracts.Messages;
+using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// UI Plugin for managing settings across all configurable plugins
 /// Provides a simple console interface for viewing and modifying settings
 /// </summary>
-public class SettingsUIPlugin : IAgPlugin
+public class SettingsUIPlugin : IAgModule
 {
     public string Name => "Settings UI";
     public Version Version => new Version(1, 0, 0);
-    public PluginCategory Category => PluginCategory.Visualization;
+    public ModuleCategory Category => ModuleCategory.Visualization;
     public string[] Dependencies => Array.Empty<string>();
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
-    private IPluginContext? _context;
-    private readonly Dictionary<string, IConfigurablePlugin> _configurablePlugins = new();
+    private IModuleContext? _context;
+    private readonly Dictionary<string, IConfigurableModule> _configurablePlugins = new();
 
-    public Task InitializeAsync(IPluginContext context)
+    public Task InitializeAsync(IModuleContext context)
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
@@ -43,12 +43,12 @@ public class SettingsUIPlugin : IAgPlugin
 
     public Task StopAsync() => Task.CompletedTask;
     public Task ShutdownAsync() => Task.CompletedTask;
-    public PluginHealth GetHealth() => PluginHealth.Healthy;
+    public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     /// <summary>
     /// Register a configurable plugin with the UI
     /// </summary>
-    public void RegisterPlugin(IConfigurablePlugin plugin)
+    public void RegisterPlugin(IConfigurableModule plugin)
     {
         _configurablePlugins[plugin.Name] = plugin;
         _logger?.LogDebug($"Registered configurable plugin: {plugin.Name}");
@@ -57,9 +57,9 @@ public class SettingsUIPlugin : IAgPlugin
     /// <summary>
     /// Get all registered plugins with their settings
     /// </summary>
-    public Dictionary<string, IPluginSettings> GetAllSettings()
+    public Dictionary<string, IModuleSettings> GetAllSettings()
     {
-        var settings = new Dictionary<string, IPluginSettings>();
+        var settings = new Dictionary<string, IModuleSettings>();
         foreach (var kvp in _configurablePlugins)
         {
             settings[kvp.Key] = kvp.Value.GetSettings();
@@ -70,7 +70,7 @@ public class SettingsUIPlugin : IAgPlugin
     /// <summary>
     /// Get settings for a specific plugin
     /// </summary>
-    public IPluginSettings? GetPluginSettings(string pluginName)
+    public IModuleSettings? GetPluginSettings(string pluginName)
     {
         if (_configurablePlugins.TryGetValue(pluginName, out var plugin))
         {
@@ -82,7 +82,7 @@ public class SettingsUIPlugin : IAgPlugin
     /// <summary>
     /// Update settings for a specific plugin
     /// </summary>
-    public bool UpdatePluginSettings(string pluginName, IPluginSettings settings)
+    public bool UpdatePluginSettings(string pluginName, IModuleSettings settings)
     {
         if (_configurablePlugins.TryGetValue(pluginName, out var plugin))
         {
@@ -95,7 +95,7 @@ public class SettingsUIPlugin : IAgPlugin
                 {
                     var msg = new SettingsChangedMessage
                     {
-                        PluginName = pluginName,
+                        ModuleName = pluginName,
                         SettingsJson = JsonSerializer.Serialize(settings),
                         TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                     };

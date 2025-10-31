@@ -1,24 +1,24 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.PluginContracts", "AgOpenGPS.PluginContracts\AgOpenGPS.PluginContracts.csproj", "{DA12E21A-713A-40A2-927A-410B0734C040}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.ModuleContracts", "AgOpenGPS.ModuleContracts\AgOpenGPS.ModuleContracts.csproj", "{DA12E21A-713A-40A2-927A-410B0734C040}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Core", "AgOpenGPS.Core\AgOpenGPS.Core.csproj", "{DD2F149F-718F-4DFE-8745-EF7E63E2D71A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.SerialIO", "AgOpenGPS.Plugins.SerialIO\AgOpenGPS.Plugins.SerialIO.csproj", "{391A7198-9B32-430D-8FD8-0DC5489F7229}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.SerialIO", "AgOpenGPS.Modules.SerialIO\AgOpenGPS.Modules.SerialIO.csproj", "{391A7198-9B32-430D-8FD8-0DC5489F7229}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.PGN", "AgOpenGPS.Plugins.PGN\AgOpenGPS.Plugins.PGN.csproj", "{DE91AFA2-4F84-45A7-AE63-38AB91CC3678}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.PGN", "AgOpenGPS.Modules.PGN\AgOpenGPS.Modules.PGN.csproj", "{DE91AFA2-4F84-45A7-AE63-38AB91CC3678}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.Autosteer", "AgOpenGPS.Plugins.Autosteer\AgOpenGPS.Plugins.Autosteer.csproj", "{5275FA08-2F53-4989-97F3-817DFAE96348}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.Autosteer", "AgOpenGPS.Modules.Autosteer\AgOpenGPS.Modules.Autosteer.csproj", "{5275FA08-2F53-4989-97F3-817DFAE96348}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Host", "AgOpenGPS.Host\AgOpenGPS.Host.csproj", "{66B78A4F-C4C5-4963-9403-AF9CBE60C496}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.DummyIO", "AgOpenGPS.Plugins.DummyIO\AgOpenGPS.Plugins.DummyIO.csproj", "{B688AF0F-B7ED-45B2-AAC7-9DAFD6043AD3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.DummyIO", "AgOpenGPS.Modules.DummyIO\AgOpenGPS.Modules.DummyIO.csproj", "{B688AF0F-B7ED-45B2-AAC7-9DAFD6043AD3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.Kinematics", "AgOpenGPS.Plugins.Kinematics\AgOpenGPS.Plugins.Kinematics.csproj", "{4E88E87B-E4AD-408F-AF0B-73BE1574A476}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.Kinematics", "AgOpenGPS.Modules.Kinematics\AgOpenGPS.Modules.Kinematics.csproj", "{4E88E87B-E4AD-408F-AF0B-73BE1574A476}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.GUI", "AgOpenGPS.GUI\AgOpenGPS.GUI.csproj", "{664D7041-0682-45E2-A1D1-D36481DD4A91}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.UI", "AgOpenGPS.Plugins.UI\AgOpenGPS.Plugins.UI.csproj", "{6ACBF340-1CEC-4755-A207-24694554095B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.UI", "AgOpenGPS.Modules.UI\AgOpenGPS.Modules.UI.csproj", "{6ACBF340-1CEC-4755-A207-24694554095B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.Monitoring", "AgOpenGPS.Modules.Monitoring\AgOpenGPS.Modules.Monitoring.csproj", "{7C55386F-76AF-4A2C-8813-150CCDE11153}"
 EndProject

@@ -1,5 +1,5 @@
 using AgOpenGPS.Core;
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

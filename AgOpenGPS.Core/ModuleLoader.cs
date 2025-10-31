@@ -18,14 +18,14 @@ public class ModuleLoader
         _logger = logger;
     }
 
-    public List<IAgModule> DiscoverPlugins()
+    public List<IAgModule> DiscoverModules()
     {
         var modules = new List<IAgModule>();
 
         if (!Directory.Exists(_moduleDirectory))
         {
             _logger.LogWarning($"Module directory not found: {_moduleDirectory}");
-            return plugins;
+            return modules;
         }
 
         foreach (var dllPath in Directory.GetFiles(_moduleDirectory, "*.dll"))
@@ -34,14 +34,14 @@ public class ModuleLoader
             {
                 var assembly = Assembly.LoadFrom(dllPath);
 
-                var pluginTypes = assembly.GetTypes()
+                var moduleTypes = assembly.GetTypes()
                     .Where(t => typeof(IAgModule).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
 
-                foreach (var type in pluginTypes)
+                foreach (var type in moduleTypes)
                 {
                     var module = (IAgModule)Activator.CreateInstance(type)!;
-                    plugins.Add(plugin);
-                    _logger.LogInformation($"Discovered plugin: {plugin.Name} v{plugin.Version}");
+                    modules.Add(module);
+                    _logger.LogInformation($"Discovered module: {module.Name} v{module.Version}");
                 }
             }
             catch (Exception ex)
@@ -50,7 +50,7 @@ public class ModuleLoader
             }
         }
 
-        return plugins;
+        return modules;
     }
 
     /// <summary>

@@ -16,7 +16,7 @@ public class ModuleWatchdog : IDisposable
     private readonly TimeSpan _hangThreshold;
     private volatile bool _disposed;
 
-    public event EventHandler<ModuleHangDetectedEventArgs>? PluginHangDetected;
+    public event EventHandler<ModuleHangDetectedEventArgs>? ModuleHangDetected;
 
     public ModuleWatchdog(
         ILogger<ModuleWatchdog> logger,
@@ -110,7 +110,7 @@ public class ModuleWatchdog : IDisposable
                 {
                     state.MarkHangReported(op);
 
-                    PluginHangDetected?.Invoke(this, new ModuleHangDetectedEventArgs
+                    ModuleHangDetected?.Invoke(this, new ModuleHangDetectedEventArgs
                     {
                         ModuleId = state.ModuleId,
                         OperationName = op.OperationName,

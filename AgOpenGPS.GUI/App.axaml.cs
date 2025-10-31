@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using AgOpenGPS.Core;
-using AgOpenGPS.PluginContracts;
+using AgOpenGPS.ModuleContracts;
 using System;
 using System.IO;
 using System.Threading;
