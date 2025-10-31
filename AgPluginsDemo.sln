@@ -20,6 +20,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.GUI", "AgOpenGPS.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Plugins.UI", "AgOpenGPS.Plugins.UI\AgOpenGPS.Plugins.UI.csproj", "{6ACBF340-1CEC-4755-A207-24694554095B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Modules.Monitoring", "AgOpenGPS.Modules.Monitoring\AgOpenGPS.Modules.Monitoring.csproj", "{7C55386F-76AF-4A2C-8813-150CCDE11153}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgOpenGPS.Tests", "AgOpenGPS.Tests\AgOpenGPS.Tests.csproj", "{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -150,6 +154,30 @@ Global
 		{6ACBF340-1CEC-4755-A207-24694554095B}.Release|x64.Build.0 = Release|Any CPU
 		{6ACBF340-1CEC-4755-A207-24694554095B}.Release|x86.ActiveCfg = Release|Any CPU
 		{6ACBF340-1CEC-4755-A207-24694554095B}.Release|x86.Build.0 = Release|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Debug|x64.Build.0 = Debug|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Debug|x86.Build.0 = Debug|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Release|x64.ActiveCfg = Release|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Release|x64.Build.0 = Release|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Release|x86.ActiveCfg = Release|Any CPU
+		{7C55386F-76AF-4A2C-8813-150CCDE11153}.Release|x86.Build.0 = Release|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Debug|x64.Build.0 = Debug|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Debug|x86.Build.0 = Debug|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Release|x64.ActiveCfg = Release|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Release|x64.Build.0 = Release|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Release|x86.ActiveCfg = Release|Any CPU
+		{40DA8637-64B4-4296-A0CE-8FD0A3BBF7F2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
