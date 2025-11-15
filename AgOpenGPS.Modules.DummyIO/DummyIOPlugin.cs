@@ -168,7 +168,7 @@ public class DummyIOPlugin : IAgModule
         // Log every 1 second (every 10th message at 10Hz)
         if ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 100) % 10 == 0)
         {
-            _logger?.LogDebug($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Speed={_speed:F2}m/s, Steer={_steerAngle:F1}°");
+            _logger?.LogInformation($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Speed={_speed:F2}m/s, SteerAngle={_steerAngle:F2}°");
         }
     }
 
@@ -190,18 +190,23 @@ public class DummyIOPlugin : IAgModule
     /// </summary>
     private void OnReceiveSteerCommand(RawDataToSendMessage msg)
     {
-        if (msg.TargetChannel != IOChannel.Serial || msg.Data.Length < 6) return;
+        if (msg.TargetChannel != IOChannel.Serial || msg.Data.Length < 7) return;
 
         try
         {
             // Decode our simple protocol (from PGN plugin)
-            // Format: [0xFE][0x01][Angle][Speed][Checksum][0xFF]
-            if (msg.Data[0] == 0xFE && msg.Data[1] == 0x01 && msg.Data[5] == 0xFF)
+            // Format: [0xFE][0x01][Angle][Speed][Engaged][Checksum][0xFF]
+            if (msg.Data[0] == 0xFE && msg.Data[1] == 0x01 && msg.Data[6] == 0xFF)
             {
                 // Decode angle (0-255 mapped to -45 to +45)
                 _steerAngle = (msg.Data[2] * 90.0 / 255.0) - 45.0;
+                bool engaged = msg.Data[4] == 1;
 
-                _logger?.LogTrace($"Received steer command: {_steerAngle:F2}°");
+                _logger?.LogInformation($"DummyIO received steer command: Angle={_steerAngle:F2}° (Engaged={engaged})");
+            }
+            else
+            {
+                _logger?.LogWarning($"DummyIO received invalid steer command: Header={msg.Data[0]:X2}, ID={msg.Data[1]:X2}, Footer={msg.Data[6]:X2}");
             }
         }
         catch (Exception ex)
