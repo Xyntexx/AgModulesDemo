@@ -39,7 +39,8 @@ public partial class App : Application
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton<IConfiguration>(configuration);
-                    services.AddSingleton<IMessageBus, MessageBus>();
+                    services.AddSingleton<MessageBus>();
+                    services.AddSingleton<IMessageBus>(sp => sp.GetRequiredService<MessageBus>());
                     services.AddSingleton<ApplicationCore>();
                     services.AddLogging(builder =>
                     {
