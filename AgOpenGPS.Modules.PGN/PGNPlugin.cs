@@ -51,6 +51,8 @@ public class PGNPlugin : IAgModule
             data = Encoding.ASCII.GetString(raw.Data);
 
             // Parse NMEA GGA sentence (position and fix quality)
+            // NOTE: We only log GGA for diagnostics, but don't publish GPS position
+            // because GGA doesn't contain heading/speed. We wait for RMC which has complete data.
             if (data.StartsWith("$GPGGA") || data.StartsWith("$GNGGA"))
             {
                 var parts = data.Split(',');
@@ -59,21 +61,8 @@ public class PGNPlugin : IAgModule
                     var lat = ParseCoordinate(parts[2], parts[3]);
                     var lon = ParseCoordinate(parts[4], parts[5]);
                     var quality = int.Parse(parts[6]);
-                    var sats = int.Parse(parts[7]);
-                    var alt = double.Parse(parts[9], System.Globalization.CultureInfo.InvariantCulture);
 
-                    var gpsMsg = new GpsPositionMessage
-                    {
-                        Latitude = lat,
-                        Longitude = lon,
-                        Altitude = alt,
-                        FixQuality = (GpsFixQuality)quality,
-                        SatelliteCount = sats,
-                        TimestampMs = raw.TimestampMs
-                    };
-
-                    _messageBus.Publish(in gpsMsg);
-                    _logger?.LogDebug($"GPS: {lat:F6}, {lon:F6}, Fix: {quality}");
+                    _logger?.LogTrace($"GGA: {lat:F6}, {lon:F6}, Fix: {quality}");
                 }
             }
             // Parse NMEA RMC sentence (includes speed and heading)
