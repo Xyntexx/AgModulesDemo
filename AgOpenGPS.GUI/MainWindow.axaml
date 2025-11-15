@@ -26,65 +26,65 @@
 
           <!-- Kinematics Data -->
           <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="Kinematics" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <TextBlock Text="Kinematics" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="#2C3E50"/>
             <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Latitude:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding Latitude}" FontFamily="Consolas"/>
+                <TextBlock Text="Latitude:" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Grid.Column="1" Text="{Binding Latitude}" FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
             <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Longitude:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding Longitude}" FontFamily="Consolas"/>
+                <TextBlock Text="Longitude:" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Grid.Column="1" Text="{Binding Longitude}" FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
             <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Heading:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding Heading}" FontFamily="Consolas"/>
+                <TextBlock Text="Heading:" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Grid.Column="1" Text="{Binding Heading}" FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
             <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Speed:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding Speed}" FontFamily="Consolas"/>
+                <TextBlock Text="Speed:" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Grid.Column="1" Text="{Binding Speed}" FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
             <Border Background="White" Padding="10" CornerRadius="3">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="WAS:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding WasAngle}" FontFamily="Consolas"/>
+                <TextBlock Text="WAS:" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Grid.Column="1" Text="{Binding WasAngle}" FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
           </StackPanel>
 
           <!-- Autosteer Data -->
           <StackPanel Grid.Row="1" Margin="0,0,0,15">
-            <TextBlock Text="Autosteer" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <TextBlock Text="Autosteer" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="#2C3E50"/>
             <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Steer Angle:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding SteerAngle}" FontFamily="Consolas"/>
+                <TextBlock Text="Steer Angle:" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Grid.Column="1" Text="{Binding SteerAngle}" FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
             <Border Background="White" Padding="10" CornerRadius="3">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Status:" FontWeight="Bold"/>
+                <TextBlock Text="Status:" FontWeight="Bold" Foreground="#2C3E50"/>
                 <TextBlock Grid.Column="1" Text="{Binding AutosteerEngaged, Converter={x:Static converters:BooleanToStringConverter.Instance}}"
-                          FontFamily="Consolas"/>
+                          FontFamily="Consolas" Foreground="#34495E"/>
               </Grid>
             </Border>
           </StackPanel>
 
           <!-- Event Log -->
           <StackPanel Grid.Row="2">
-            <TextBlock Text="Event Log" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <TextBlock Text="Event Log" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="#2C3E50"/>
             <Border Background="White" CornerRadius="3" Padding="5">
-              <ListBox ItemsSource="{Binding LogMessages}" Height="200">
+              <ListBox ItemsSource="{Binding LogMessages}" Height="200" Background="White">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
-                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11"/>
+                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11" Foreground="#34495E"/>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
@@ -106,7 +106,7 @@
 
         <Border Background="#ECF0F1" Padding="15" CornerRadius="5">
           <StackPanel Spacing="10">
-            <TextBlock Text="Quick Actions" FontSize="16" FontWeight="Bold"/>
+            <TextBlock Text="Quick Actions" FontSize="16" FontWeight="Bold" Foreground="#2C3E50"/>
             <Button Content="{Binding AutosteerButtonText}"
                     Command="{Binding ToggleAutosteerCommand}"
                     HorizontalAlignment="Stretch"
