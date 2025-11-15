@@ -24,9 +24,9 @@
       <Border Grid.Column="0" Background="#ECF0F1" CornerRadius="5" Padding="15">
         <Grid RowDefinitions="Auto,Auto,*">
 
-          <!-- GPS Data -->
+          <!-- Kinematics Data -->
           <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="GPS Position" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            <TextBlock Text="Kinematics" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
             <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
               <Grid ColumnDefinitions="120,*">
                 <TextBlock Text="Latitude:" FontWeight="Bold"/>
@@ -51,16 +51,10 @@
                 <TextBlock Grid.Column="1" Text="{Binding Speed}" FontFamily="Consolas"/>
               </Grid>
             </Border>
-            <Border Background="White" Padding="10" CornerRadius="3" Margin="0,0,0,5">
-              <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Fix Quality:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding FixQuality}" FontFamily="Consolas"/>
-              </Grid>
-            </Border>
             <Border Background="White" Padding="10" CornerRadius="3">
               <Grid ColumnDefinitions="120,*">
-                <TextBlock Text="Satellites:" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding SatelliteCount}" FontFamily="Consolas"/>
+                <TextBlock Text="WAS:" FontWeight="Bold"/>
+                <TextBlock Grid.Column="1" Text="{Binding WasAngle}" FontFamily="Consolas"/>
               </Grid>
             </Border>
           </StackPanel>
@@ -129,15 +123,7 @@
                 </Style>
               </Button.Styles>
             </Button>
-            <Button Content="Settings" HorizontalAlignment="Stretch" Padding="10"/>
-            <Button Content="Calibrate GPS" HorizontalAlignment="Stretch" Padding="10"/>
-            <Button Content="Reset Autosteer" HorizontalAlignment="Stretch" Padding="10"/>
           </StackPanel>
-        </Border>
-
-        <Border Background="#E74C3C" Padding="15" CornerRadius="5">
-          <Button Content="EMERGENCY STOP" HorizontalAlignment="Stretch" Padding="15"
-                  Foreground="White" FontWeight="Bold" FontSize="14"/>
         </Border>
 
       </StackPanel>

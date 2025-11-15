@@ -14,7 +14,7 @@ public class PGNPlugin : IAgModule
     public string Name => "PGN Translator";
     public Version Version => new Version(1, 0, 0);
     public ModuleCategory Category => ModuleCategory.DataProcessing;
-    public string[] Dependencies => new[] { "Serial IO" };
+    public string[] Dependencies => Array.Empty<string>();
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;

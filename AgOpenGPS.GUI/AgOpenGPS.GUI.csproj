@@ -33,8 +33,7 @@
     <ProjectReference Include="..\AgOpenGPS.Modules.Kinematics\AgOpenGPS.Modules.Kinematics.csproj" />
     <ProjectReference Include="..\AgOpenGPS.Modules.Monitoring\AgOpenGPS.Modules.Monitoring.csproj" />
     <ProjectReference Include="..\AgOpenGPS.Modules.PGN\AgOpenGPS.Modules.PGN.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Modules.SerialIO\AgOpenGPS.Modules.SerialIO.csproj" />
-    <ProjectReference Include="..\AgOpenGPS.Modules.UI\AgOpenGPS.Modules.UI.csproj" />
+    <ProjectReference Include="..\AgOpenGPS.Modules.DemoUI\AgOpenGPS.Modules.DemoUI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -52,8 +51,7 @@
       <PluginFiles Include="..\AgOpenGPS.Modules.Kinematics\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.Kinematics.dll" />
       <PluginFiles Include="..\AgOpenGPS.Modules.Monitoring\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.Monitoring.dll" />
       <PluginFiles Include="..\AgOpenGPS.Modules.PGN\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.PGN.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Modules.SerialIO\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.SerialIO.dll" />
-      <PluginFiles Include="..\AgOpenGPS.Modules.UI\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.UI.dll" />
+      <PluginFiles Include="..\AgOpenGPS.Modules.DemoUi\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.Modules.DemoUi.dll" />
       <!-- Also copy ModuleContracts to plugins folder so modules can find it -->
       <PluginFiles Include="..\AgOpenGPS.ModuleContracts\bin\$(Configuration)\$(TargetFramework)\AgOpenGPS.ModuleContracts.dll" />
     </ItemGroup>

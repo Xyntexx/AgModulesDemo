@@ -29,10 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private string _steerAngle = "0.0";
 
     [ObservableProperty]
-    private string _satelliteCount = "0";
-
-    [ObservableProperty]
-    private string _fixQuality = "No Fix";
+    private string _wasAngle = "0.0";
 
     [ObservableProperty]
     private bool _autosteerEngaged = false;
@@ -63,13 +60,12 @@ public partial class MainWindowViewModel : ObservableObject
         Longitude = $"{msg.Longitude:F6}°";
         Heading = $"{msg.Heading:F1}°";
         Speed = $"{msg.Speed:F2} m/s";
-        SatelliteCount = msg.SatelliteCount.ToString();
-        FixQuality = msg.FixQuality.ToString();
     }
 
     private void OnSteerCommand(SteerCommandMessage msg)
     {
         SteerAngle = $"{msg.SteerAngleDegrees:F2}°";
+        WasAngle = $"{msg.SteerAngleDegrees:F2}°"; // TODO: Replace with actual WAS sensor data when available
 
         // Update engaged status from steer command
         if (AutosteerEngaged != msg.IsEngaged)

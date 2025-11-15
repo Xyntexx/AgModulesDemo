@@ -1,4 +1,4 @@
-namespace AgOpenGPS.Modules.UI;
+namespace AgOpenGPS.Modules.DemoUI;
 
 using System.Text.Json;
 using AgOpenGPS.ModuleContracts;
