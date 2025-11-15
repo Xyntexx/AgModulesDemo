@@ -2,7 +2,69 @@
 
 ## Overview
 
-This document describes the architecture of the AgOpenGPS microkernel demonstration, explaining the design decisions, component interactions, and implementation details.
+AgOpenGPS implements a **microkernel architecture** with **publish-subscribe messaging**, creating a minimal, extensible core for precision agriculture guidance systems.
+
+### Architecture Philosophy
+
+**Microkernel Pattern**: The system consists of a small, stable core (the "microkernel") that provides only essential services—message routing, module lifecycle management, and resource monitoring. All application functionality lives in dynamically-loaded modules that communicate exclusively through the message bus. This design enables:
+- **Extensibility**: Add new sensors, algorithms, or UI components without modifying the core
+- **Maintainability**: Each module is isolated; bugs in one module cannot crash the system
+- **Testability**: Modules can be tested independently; time and message flow are controllable
+- **Hot Reload**: Update modules during operation without restarting (development feature)
+
+**Publish-Subscribe (Pub/Sub) Pattern**: Modules communicate via a type-safe message bus using the Observer pattern. Publishers emit messages without knowing who receives them; subscribers listen for message types without knowing the source. This provides:
+- **Loose Coupling**: Modules depend on message contracts (interfaces), not implementations
+- **Scalability**: Adding subscribers doesn't affect publishers; adding message types doesn't break existing code
+- **Flexibility**: Any module can publish or subscribe to any message type
+- **Zero Allocation**: Struct-based messages with `in` parameters avoid heap allocations for real-time performance
+
+### System Layers
+
+```
+┌─────────────────────────────────────────────┐
+│  Application Host (GUI/Console)            │  ← Entry point
+├─────────────────────────────────────────────┤
+│  ApplicationCore (Microkernel)             │
+│  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ModuleManager│  │MessageBus (Pub/Sub) │  │  ← Core services
+│  │ModuleWatchdog│ │ModuleMemoryMonitor  │  │
+│  └─────────────┘  └─────────────────────┘  │
+├─────────────────────────────────────────────┤
+│  Module Contracts (IAgModule, Messages)    │  ← Shared interfaces
+├─────────────────────────────────────────────┤
+│  Modules (Plugins)                         │
+│  [GPS I/O] [Autosteer] [UI] [Monitoring]  │  ← Application logic
+└─────────────────────────────────────────────┘
+```
+
+**Message Flow Example** (GPS data → Autosteer):
+```
+DummyIO Module                MessageBus              Autosteer Module
+     │                            │                          │
+     │──Publish(GpsPositionMsg)──>│                          │
+     │                            │──Notify subscribers──────>│
+     │                            │                          │─Process position
+     │                            │                          │─Calculate steering
+     │                            │<──Publish(SteerMsg)──────│
+     │                            │──Notify subscribers──────>│ (Vehicle Control)
+```
+
+**Key Characteristics**:
+- **Type-Safe**: Compile-time checking prevents runtime message errors (`where T : struct`)
+- **Priority-Based**: Critical handlers (safety systems) execute before logging/UI
+- **Failure-Isolated**: Crashing handlers are automatically removed after 10 failures
+- **Resource-Bounded**: Memory limits (500MB/module), message cache limits (100 types, 1hr TTL)
+- **Production-Ready**: Structured logging, health monitoring, graceful degradation
+
+### Design Principles
+
+1. **Separation of Concerns**: Core handles infrastructure; modules handle domain logic
+2. **Dependency Inversion**: Modules depend on abstractions (IMessageBus, ITimeProvider), not concrete implementations
+3. **Single Responsibility**: Each module does one thing well (GPS I/O, steering control, UI rendering)
+4. **Open/Closed Principle**: Add features via new modules, not core modifications
+5. **Interface Segregation**: Small, focused contracts (IAgModule has 6 methods, IMessageBus has 4)
+
+This document describes the detailed implementation of this architecture, component interactions, and design trade-offs.
 
 ## Architecture Diagram
 
