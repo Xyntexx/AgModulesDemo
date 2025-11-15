@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AgOpenGPS.Core;
@@ -56,23 +57,31 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnGpsPosition(GpsPositionMessage msg)
     {
-        Latitude = $"{msg.Latitude:F6}°";
-        Longitude = $"{msg.Longitude:F6}°";
-        Heading = $"{msg.Heading:F1}°";
-        Speed = $"{msg.Speed:F2} m/s";
+        // Marshal to UI thread for property updates
+        Dispatcher.UIThread.Post(() =>
+        {
+            Latitude = $"{msg.Latitude:F6}°";
+            Longitude = $"{msg.Longitude:F6}°";
+            Heading = $"{msg.Heading:F1}°";
+            Speed = $"{msg.Speed:F2} m/s";
+        });
     }
 
     private void OnSteerCommand(SteerCommandMessage msg)
     {
-        SteerAngle = $"{msg.SteerAngleDegrees:F2}°";
-        WasAngle = $"{msg.SteerAngleDegrees:F2}°"; // TODO: Replace with actual WAS sensor data when available
-
-        // Update engaged status from steer command
-        if (AutosteerEngaged != msg.IsEngaged)
+        // Marshal to UI thread for property updates
+        Dispatcher.UIThread.Post(() =>
         {
-            AutosteerEngaged = msg.IsEngaged;
-            AutosteerButtonText = AutosteerEngaged ? "DISENGAGE AUTOSTEER" : "ENGAGE AUTOSTEER";
-        }
+            SteerAngle = $"{msg.SteerAngleDegrees:F2}°";
+            WasAngle = $"{msg.SteerAngleDegrees:F2}°"; // TODO: Replace with actual WAS sensor data when available
+
+            // Update engaged status from steer command
+            if (AutosteerEngaged != msg.IsEngaged)
+            {
+                AutosteerEngaged = msg.IsEngaged;
+                AutosteerButtonText = AutosteerEngaged ? "DISENGAGE AUTOSTEER" : "ENGAGE AUTOSTEER";
+            }
+        });
     }
 
     [RelayCommand]
@@ -102,13 +111,17 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void AddLog(string message)
     {
-        var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-        LogMessages.Insert(0, $"[{timestamp}] {message}");
-
-        // Keep only last 100 messages
-        while (LogMessages.Count > 100)
+        // Marshal to UI thread for collection updates
+        Dispatcher.UIThread.Post(() =>
         {
-            LogMessages.RemoveAt(LogMessages.Count - 1);
-        }
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            LogMessages.Insert(0, $"[{timestamp}] {message}");
+
+            // Keep only last 100 messages
+            while (LogMessages.Count > 100)
+            {
+                LogMessages.RemoveAt(LogMessages.Count - 1);
+            }
+        });
     }
 }

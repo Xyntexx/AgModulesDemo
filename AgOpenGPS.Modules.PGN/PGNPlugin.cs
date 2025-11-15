@@ -90,7 +90,7 @@ public class PGNPlugin : IAgModule
                     };
 
                     _messageBus.Publish(in gpsMsg);
-                    _logger?.LogDebug($"GPS: {lat:F6}, {lon:F6}, Heading: {heading:F1}°, Speed: {speedMs:F2}m/s");
+                    _logger?.LogTrace($"PGN published GPS: Lat={lat:F6}, Lon={lon:F6}, Heading={heading:F1}°, Speed={speedMs:F2}m/s");
                 }
             }
         }
