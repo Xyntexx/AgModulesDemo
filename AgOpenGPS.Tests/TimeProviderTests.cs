@@ -1,6 +1,8 @@
 using AgOpenGPS.Core;
 using AgOpenGPS.ModuleContracts;
 using AgOpenGPS.ModuleContracts.Messages;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace AgOpenGPS.Tests;
@@ -177,7 +179,8 @@ public class MessageBusTimeTests
         // Arrange
         var startTime = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
         var timeProvider = new SimulatedTimeProvider(startTime);
-        var messageBus = new MessageBus(timeProvider);
+        var logger = NullLogger<MessageBus>.Instance;
+        var messageBus = new MessageBus(timeProvider, logger);
 
         var testMessage = new GpsPositionMessage
         {
@@ -204,7 +207,8 @@ public class MessageBusTimeTests
         // Arrange
         var startTime = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
         var timeProvider = new SimulatedTimeProvider(startTime);
-        var messageBus = new MessageBus(timeProvider);
+        var logger = NullLogger<MessageBus>.Instance;
+        var messageBus = new MessageBus(timeProvider, logger);
 
         var testMessage = new GpsPositionMessage
         {
@@ -237,7 +241,8 @@ public class MessageBusTimeTests
         var timeProvider = new SimulatedTimeProvider(startTime);
         timeProvider.TimeScale = 3600.0; // 3600x speed (1 hour per second)
 
-        var messageBus = new MessageBus(timeProvider);
+        var logger = NullLogger<MessageBus>.Instance;
+        var messageBus = new MessageBus(timeProvider, logger);
         var messageCount = 0;
 
         // Subscribe to count messages

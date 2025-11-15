@@ -1,6 +1,7 @@
 namespace AgOpenGPS.Core;
 
 using AgOpenGPS.ModuleContracts;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 /// <summary>
@@ -13,13 +14,27 @@ public class MessageBus : IMessageBus, IDisposable
     private readonly ConcurrentDictionary<Type, List<SubscriberInfo>> _subscribers = new();
     private readonly ConcurrentDictionary<string, List<IDisposable>> _scopedSubscriptions = new();
     private readonly ConcurrentDictionary<Type, LastMessageInfo> _lastMessages = new();
+    private readonly ConcurrentDictionary<Type, FailureTracker> _failureTrackers = new();
     private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.SupportsRecursion);
     private readonly ITimeProvider _timeProvider;
+    private readonly ILogger<MessageBus> _logger;
+    private readonly int _maxLastMessages;
+    private readonly TimeSpan _lastMessageTtl;
+    private readonly int _maxFailuresBeforeRemoval;
     private volatile bool _disposed;
 
-    public MessageBus(ITimeProvider timeProvider)
+    public MessageBus(
+        ITimeProvider timeProvider,
+        ILogger<MessageBus> logger,
+        int maxLastMessages = 100,
+        TimeSpan? lastMessageTtl = null,
+        int maxFailuresBeforeRemoval = 10)
     {
         _timeProvider = timeProvider;
+        _logger = logger;
+        _maxLastMessages = maxLastMessages;
+        _lastMessageTtl = lastMessageTtl ?? TimeSpan.FromHours(1);
+        _maxFailuresBeforeRemoval = maxFailuresBeforeRemoval;
     }
 
     public IDisposable Subscribe<T>(Action<T> handler) where T : struct
@@ -99,12 +114,8 @@ public class MessageBus : IMessageBus, IDisposable
 
         var messageType = typeof(T);
 
-        // Store last message with timestamp
-        _lastMessages[messageType] = new LastMessageInfo
-        {
-            Message = message,
-            Timestamp = _timeProvider.UtcNow
-        };
+        // Store last message with timestamp and enforce limits
+        StoreLastMessage(messageType, message);
 
         _lock.EnterReadLock();
         List<SubscriberInfo>? subscribersCopy = null;
@@ -127,17 +138,42 @@ public class MessageBus : IMessageBus, IDisposable
         // Execute handlers outside of lock to prevent deadlocks
         if (subscribersCopy != null)
         {
+            var failedHandlers = new List<string>();
+
             foreach (var sub in subscribersCopy)
             {
                 try
                 {
                     ((Action<T>)sub.Handler)(message);
+
+                    // Reset failure count on success
+                    ResetFailureCount(messageType, sub.SubscriptionId);
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't let one bad handler break others
-                    Console.WriteLine($"Error in message handler for {typeof(T).Name}: {ex.Message}");
+                    // Track failure and log with full details
+                    var failureCount = RecordFailure(messageType, sub.SubscriptionId);
+
+                    _logger.LogError(ex,
+                        "Error in message handler for {MessageType}. " +
+                        "Handler ID: {HandlerId}, Failure count: {FailureCount}/{MaxFailures}",
+                        messageType.Name, sub.SubscriptionId, failureCount, _maxFailuresBeforeRemoval);
+
+                    if (failureCount >= _maxFailuresBeforeRemoval)
+                    {
+                        _logger.LogWarning(
+                            "Handler {HandlerId} for {MessageType} has failed {FailureCount} times. Marking for removal.",
+                            sub.SubscriptionId, messageType.Name, failureCount);
+
+                        failedHandlers.Add(sub.SubscriptionId);
+                    }
                 }
+            }
+
+            // Remove repeatedly failing handlers
+            if (failedHandlers.Count > 0)
+            {
+                RemoveFailedHandlers<T>(failedHandlers);
             }
         }
     }
@@ -248,6 +284,127 @@ public class MessageBus : IMessageBus, IDisposable
     {
         public object Message { get; set; } = null!;
         public DateTimeOffset Timestamp { get; set; }
+    }
+
+    private class FailureTracker
+    {
+        public ConcurrentDictionary<string, int> HandlerFailureCounts { get; } = new();
+    }
+
+    /// <summary>
+    /// Store last message with cleanup policy enforcement
+    /// </summary>
+    private void StoreLastMessage<T>(Type messageType, T message) where T : struct
+    {
+        _lastMessages[messageType] = new LastMessageInfo
+        {
+            Message = message,
+            Timestamp = _timeProvider.UtcNow
+        };
+
+        // Enforce size limit by removing oldest entries
+        if (_lastMessages.Count > _maxLastMessages)
+        {
+            CleanupOldMessages();
+        }
+    }
+
+    /// <summary>
+    /// Remove expired messages based on TTL and enforce size limits
+    /// </summary>
+    private void CleanupOldMessages()
+    {
+        var now = _timeProvider.UtcNow;
+        var toRemove = new List<Type>();
+
+        // Find expired entries
+        foreach (var kvp in _lastMessages)
+        {
+            if (now - kvp.Value.Timestamp > _lastMessageTtl)
+            {
+                toRemove.Add(kvp.Key);
+            }
+        }
+
+        // If still over limit after TTL cleanup, remove oldest entries
+        if (_lastMessages.Count - toRemove.Count > _maxLastMessages)
+        {
+            var oldest = _lastMessages
+                .OrderBy(kvp => kvp.Value.Timestamp)
+                .Take(_lastMessages.Count - _maxLastMessages)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            toRemove.AddRange(oldest);
+        }
+
+        // Remove collected entries
+        foreach (var type in toRemove)
+        {
+            if (_lastMessages.TryRemove(type, out _))
+            {
+                _logger.LogDebug("Removed cached message for type {MessageType} (TTL expired or size limit)", type.Name);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Record a handler failure and return the failure count
+    /// </summary>
+    private int RecordFailure(Type messageType, string subscriptionId)
+    {
+        var tracker = _failureTrackers.GetOrAdd(messageType, _ => new FailureTracker());
+        return tracker.HandlerFailureCounts.AddOrUpdate(subscriptionId, 1, (_, count) => count + 1);
+    }
+
+    /// <summary>
+    /// Reset failure count for a handler (called on successful execution)
+    /// </summary>
+    private void ResetFailureCount(Type messageType, string subscriptionId)
+    {
+        if (_failureTrackers.TryGetValue(messageType, out var tracker))
+        {
+            tracker.HandlerFailureCounts.TryRemove(subscriptionId, out _);
+        }
+    }
+
+    /// <summary>
+    /// Remove handlers that have failed repeatedly
+    /// </summary>
+    private void RemoveFailedHandlers<T>(List<string> failedHandlerIds) where T : struct
+    {
+        _lock.EnterWriteLock();
+        try
+        {
+            var messageType = typeof(T);
+            if (_subscribers.TryGetValue(messageType, out var subscribers))
+            {
+                lock (subscribers)
+                {
+                    var removedCount = subscribers.RemoveAll(s => failedHandlerIds.Contains(s.SubscriptionId));
+
+                    if (removedCount > 0)
+                    {
+                        _logger.LogWarning(
+                            "Removed {Count} failing handler(s) for message type {MessageType}",
+                            removedCount, messageType.Name);
+                    }
+                }
+            }
+
+            // Clean up failure trackers for removed handlers
+            if (_failureTrackers.TryGetValue(messageType, out var tracker))
+            {
+                foreach (var handlerId in failedHandlerIds)
+                {
+                    tracker.HandlerFailureCounts.TryRemove(handlerId, out _);
+                }
+            }
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
     }
 }
 

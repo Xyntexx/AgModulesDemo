@@ -22,6 +22,7 @@ public class ModuleManager : IDisposable
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly ModuleTaskScheduler _taskScheduler;
     private readonly ModuleWatchdog _watchdog;
+    private readonly ModuleMemoryMonitor _memoryMonitor;
     private volatile bool _disposed;
 
     public ModuleManager(
@@ -38,9 +39,14 @@ public class ModuleManager : IDisposable
         _timeProvider = timeProvider;
         _taskScheduler = new ModuleTaskScheduler(services.GetRequiredService<ILogger<ModuleTaskScheduler>>());
         _watchdog = new ModuleWatchdog(services.GetRequiredService<ILogger<ModuleWatchdog>>());
+        _memoryMonitor = new ModuleMemoryMonitor(
+            services.GetRequiredService<ILogger<ModuleMemoryMonitor>>(),
+            maxMemoryPerModuleMB: 500,
+            globalMemoryWarningThresholdMB: 2048);
 
-        // Subscribe to hang detection events
+        // Subscribe to monitoring events
         _watchdog.ModuleHangDetected += OnModuleHangDetected;
+        _memoryMonitor.ModuleMemoryExceeded += OnModuleMemoryExceeded;
     }
 
     private void OnModuleHangDetected(object? sender, ModuleHangDetectedEventArgs e)
@@ -50,6 +56,22 @@ public class ModuleManager : IDisposable
 
         // Optionally auto-reload the hanging module
         // await ReloadModuleAsync(e.ModuleId);
+    }
+
+    private void OnModuleMemoryExceeded(object? sender, ModuleMemoryExceededEventArgs e)
+    {
+        _logger.LogWarning(
+            "MODULE MEMORY LIMIT EXCEEDED: {ModuleId} - Estimated memory {EstimatedMB}MB exceeds limit {LimitMB}MB. " +
+            "Warning count: {WarningCount}",
+            e.ModuleId, e.EstimatedMemoryMB, e.LimitMB, e.WarningCount);
+
+        // After 3 warnings, consider reloading the module
+        if (e.WarningCount >= 3)
+        {
+            _logger.LogError(
+                "Module {ModuleId} has exceeded memory limit {Count} times. Consider manual intervention.",
+                e.ModuleId, e.WarningCount);
+        }
     }
 
     /// <summary>
@@ -123,6 +145,9 @@ public class ModuleManager : IDisposable
                 {
                     throw new InvalidOperationException($"Module initialization failed: {initResult.ErrorMessage}");
                 }
+
+                // Register with memory monitor before starting
+                _memoryMonitor.RegisterModule(moduleId);
 
                 // Start with comprehensive exception handling on dedicated thread
                 registration.State = ModuleState.Starting;
@@ -245,6 +270,7 @@ public class ModuleManager : IDisposable
                 // Cleanup monitoring and task scheduler
                 _watchdog.StopMonitoring(moduleId);
                 _taskScheduler.CleanupModule(moduleId);
+                _memoryMonitor.UnregisterModule(moduleId);
 
                 registration.State = ModuleState.Unloaded;
 
@@ -480,6 +506,7 @@ public class ModuleManager : IDisposable
         _disposed = true;
         _shutdownCts.Cancel();
         _watchdog.Dispose();
+        _memoryMonitor.Dispose();
         _lifecycleLock.Dispose();
         _shutdownCts.Dispose();
     }
