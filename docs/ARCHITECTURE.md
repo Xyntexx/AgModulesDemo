@@ -64,7 +64,43 @@ DummyIO Module                MessageBus              Autosteer Module
 4. **Open/Closed Principle**: Add features via new modules, not core modifications
 5. **Interface Segregation**: Small, focused contracts (IAgModule has 6 methods, IMessageBus has 4)
 
-This document describes the detailed implementation of this architecture, component interactions, and design trade-offs.
+### Design Patterns Used
+
+The architecture employs numerous proven design patterns:
+
+**Creational Patterns:**
+- **Dependency Injection**: Core services managed via Microsoft.Extensions.DependencyInjection
+- **Factory Pattern**: Reflective module discovery and instantiation in `ModuleLoader.cs`
+- **Singleton**: Core infrastructure components (ApplicationCore, MessageBus, ModuleManager)
+- **Strategy**: Swappable `ITimeProvider` implementations (SystemTimeProvider vs SimulatedTimeProvider)
+
+**Structural Patterns:**
+- **Adapter**: `ScopedMessageBus` auto-scopes subscriptions per module
+- **Facade**: `ApplicationCore` provides unified API to complex subsystems
+- **Decorator**: `SafeModuleExecutor` adds timeout and exception handling transparently
+- **Proxy**: `ScopedModuleContext` controls module access to core services
+
+**Behavioral Patterns:**
+- **Observer**: Priority-based publish-subscribe in `MessageBus` with automatic handler removal on repeated failures
+- **State Machine**: Module lifecycle states (Loading → Initializing → Starting → Running → Stopping → Unloaded)
+- **Command**: Operations encapsulated as `Func<Task>` for deferred execution
+- **Template Method**: Exception handling skeleton in `SafeModuleExecutor`
+- **Chain of Responsibility**: Multi-step dependency resolution (graph build → cycle detection → topological sort → category ordering)
+
+**Concurrency Patterns:**
+- **Thread Pool**: Per-module dedicated thread pools (2 threads each) prevent cross-module blocking
+- **Producer-Consumer**: `BlockingCollection` work queues in `ModuleThreadPool`
+- **Reader-Writer Lock**: `MessageBus` allows concurrent publish operations
+- **Semaphore**: Lifecycle operations serialized in `ModuleManager`
+
+**Resilience Patterns:**
+- **Circuit Breaker**: Handlers removed after 10 consecutive failures to prevent cascading failures
+- **Timeout**: All module operations protected with configurable timeouts (30s init/start, 10s stop/shutdown)
+- **Watchdog/Heartbeat**: `ModuleWatchdog` detects operations exceeding 60s hang threshold
+- **Memory Monitoring**: Per-module tracking (500MB limit) with global pressure detection (2GB)
+- **Health Check**: Proactive monitoring via `ModuleHealth` status with timeout protection
+
+This document describes the detailed implementation of these patterns, component interactions, and design trade-offs.
 
 ## Architecture Diagram
 
