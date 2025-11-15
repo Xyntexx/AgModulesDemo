@@ -28,4 +28,10 @@ public interface IMessageBus
     /// Async publish for non-time-critical messages
     /// </summary>
     Task PublishAsync<T>(T message) where T : struct;
+
+    /// <summary>
+    /// Get the last published message of a given type with timestamp
+    /// Returns true if a message was previously published, false otherwise
+    /// </summary>
+    bool TryGetLastMessage<T>(out T message, out DateTimeOffset timestamp) where T : struct;
 }

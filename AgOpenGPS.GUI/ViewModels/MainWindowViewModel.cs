@@ -64,6 +64,12 @@ public partial class MainWindowViewModel : ObservableObject
             Longitude = $"{msg.Longitude:F6}°";
             Heading = $"{msg.Heading:F1}°";
             Speed = $"{msg.Speed:F2} m/s";
+
+            // Debug: Log heading updates to verify they're being processed
+            if ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000) % 2 == 0)
+            {
+                AddLog($"UI: Heading={msg.Heading:F1}° (Lat={msg.Latitude:F6}, Lon={msg.Longitude:F6})");
+            }
         });
     }
 

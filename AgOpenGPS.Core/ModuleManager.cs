@@ -545,6 +545,11 @@ internal class ScopedMessageBus : IMessageBus
     {
         return _innerBus.PublishAsync(message);
     }
+
+    public bool TryGetLastMessage<T>(out T message, out DateTimeOffset timestamp) where T : struct
+    {
+        return _innerBus.TryGetLastMessage(out message, out timestamp);
+    }
 }
 
 // Module lifecycle state

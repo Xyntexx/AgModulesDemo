@@ -144,7 +144,9 @@ public class DummyIOPlugin : IAgModule
         // Generate NMEA RMC sentence (includes speed and heading)
         // $GPRMC,time,status,lat,N/S,lon,E/W,speed,heading,date,magvar,E/W,mode*checksum
         double speedKnots = _speed * 1.94384; // Convert m/s to knots
-        string rmc = $"$GPRMC,{time},A,{latStr},{latDir},{lonStr},{lonDir},{speedKnots:F2},{_heading:F2},{date},,";
+        string speedStr = speedKnots.ToString("F2", CultureInfo.InvariantCulture);
+        string headingStr = _heading.ToString("F2", CultureInfo.InvariantCulture);
+        string rmc = $"$GPRMC,{time},A,{latStr},{latDir},{lonStr},{lonDir},{speedStr},{headingStr},{date},,";
         rmc += $"*{CalculateChecksum(rmc):X2}\r\n";
 
         // Publish GGA

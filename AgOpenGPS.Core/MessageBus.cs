@@ -12,6 +12,7 @@ public class MessageBus : IMessageBus, IDisposable
 {
     private readonly ConcurrentDictionary<Type, List<SubscriberInfo>> _subscribers = new();
     private readonly ConcurrentDictionary<string, List<IDisposable>> _scopedSubscriptions = new();
+    private readonly ConcurrentDictionary<Type, LastMessageInfo> _lastMessages = new();
     private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.SupportsRecursion);
     private volatile bool _disposed;
 
@@ -90,11 +91,19 @@ public class MessageBus : IMessageBus, IDisposable
     {
         ThrowIfDisposed();
 
+        var messageType = typeof(T);
+
+        // Store last message with timestamp
+        _lastMessages[messageType] = new LastMessageInfo
+        {
+            Message = message,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+
         _lock.EnterReadLock();
         List<SubscriberInfo>? subscribersCopy = null;
         try
         {
-            var messageType = typeof(T);
             if (_subscribers.TryGetValue(messageType, out var subscribers))
             {
                 // Create snapshot to avoid holding read lock during handler execution
@@ -173,6 +182,23 @@ public class MessageBus : IMessageBus, IDisposable
     }
 
     /// <summary>
+    /// Get the last published message of a given type
+    /// </summary>
+    public bool TryGetLastMessage<T>(out T message, out DateTimeOffset timestamp) where T : struct
+    {
+        if (_lastMessages.TryGetValue(typeof(T), out var info))
+        {
+            message = (T)info.Message;
+            timestamp = info.Timestamp;
+            return true;
+        }
+
+        message = default;
+        timestamp = default;
+        return false;
+    }
+
+    /// <summary>
     /// Get subscription statistics for monitoring
     /// </summary>
     public MessageBusStatistics GetStatistics()
@@ -181,7 +207,8 @@ public class MessageBus : IMessageBus, IDisposable
         {
             MessageTypeCount = _subscribers.Count,
             TotalSubscribers = _subscribers.Values.Sum(list => list.Count),
-            ScopeCount = _scopedSubscriptions.Count
+            ScopeCount = _scopedSubscriptions.Count,
+            LastMessageCount = _lastMessages.Count
         };
     }
 
@@ -210,6 +237,12 @@ public class MessageBus : IMessageBus, IDisposable
             }
         }
     }
+
+    private class LastMessageInfo
+    {
+        public object Message { get; set; } = null!;
+        public DateTimeOffset Timestamp { get; set; }
+    }
 }
 
 public class MessageBusStatistics
@@ -217,4 +250,5 @@ public class MessageBusStatistics
     public int MessageTypeCount { get; set; }
     public int TotalSubscribers { get; set; }
     public int ScopeCount { get; set; }
+    public int LastMessageCount { get; set; }
 }
