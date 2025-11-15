@@ -14,7 +14,13 @@ public class MessageBus : IMessageBus, IDisposable
     private readonly ConcurrentDictionary<string, List<IDisposable>> _scopedSubscriptions = new();
     private readonly ConcurrentDictionary<Type, LastMessageInfo> _lastMessages = new();
     private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.SupportsRecursion);
+    private readonly ITimeProvider _timeProvider;
     private volatile bool _disposed;
+
+    public MessageBus(ITimeProvider timeProvider)
+    {
+        _timeProvider = timeProvider;
+    }
 
     public IDisposable Subscribe<T>(Action<T> handler) where T : struct
     {
@@ -97,7 +103,7 @@ public class MessageBus : IMessageBus, IDisposable
         _lastMessages[messageType] = new LastMessageInfo
         {
             Message = message,
-            Timestamp = DateTimeOffset.UtcNow
+            Timestamp = _timeProvider.UtcNow
         };
 
         _lock.EnterReadLock();

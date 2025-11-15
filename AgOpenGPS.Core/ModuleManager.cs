@@ -16,6 +16,7 @@ public class ModuleManager : IDisposable
     private readonly IConfiguration _configuration;
     private readonly ILogger<ModuleManager> _logger;
     private readonly MessageBus _messageBus;
+    private readonly ITimeProvider _timeProvider;
     private readonly ConcurrentDictionary<string, ModuleRegistration> _modules = new();
     private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
     private readonly CancellationTokenSource _shutdownCts = new();
@@ -27,12 +28,14 @@ public class ModuleManager : IDisposable
         IServiceProvider services,
         IConfiguration configuration,
         ILogger<ModuleManager> logger,
-        MessageBus messageBus)
+        MessageBus messageBus,
+        ITimeProvider timeProvider)
     {
         _services = services;
         _configuration = configuration;
         _logger = logger;
         _messageBus = messageBus;
+        _timeProvider = timeProvider;
         _taskScheduler = new ModuleTaskScheduler(services.GetRequiredService<ILogger<ModuleTaskScheduler>>());
         _watchdog = new ModuleWatchdog(services.GetRequiredService<ILogger<ModuleWatchdog>>());
 
@@ -93,6 +96,7 @@ public class ModuleManager : IDisposable
                     _services,
                     _configuration,
                     _logger,
+                    _timeProvider,
                     _shutdownCts.Token
                 );
 
@@ -495,6 +499,7 @@ internal class ScopedModuleContext : IModuleContext
         IServiceProvider services,
         IConfiguration configuration,
         ILogger logger,
+        ITimeProvider timeProvider,
         CancellationToken appShutdownToken)
     {
         _messageBus = messageBus;
@@ -502,6 +507,7 @@ internal class ScopedModuleContext : IModuleContext
         Services = services;
         Configuration = configuration;
         Logger = logger;
+        TimeProvider = timeProvider;
         AppShutdownToken = appShutdownToken;
     }
 
@@ -509,6 +515,7 @@ internal class ScopedModuleContext : IModuleContext
     public IServiceProvider Services { get; }
     public IConfiguration Configuration { get; }
     public ILogger Logger { get; }
+    public ITimeProvider TimeProvider { get; }
     public CancellationToken AppShutdownToken { get; }
 }
 

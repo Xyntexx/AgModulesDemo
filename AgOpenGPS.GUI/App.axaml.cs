@@ -39,6 +39,10 @@ public partial class App : Application
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton<IConfiguration>(configuration);
+
+                    // TimeProvider - use SystemTimeProvider for real-time operation
+                    services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+
                     services.AddSingleton<MessageBus>();
                     services.AddSingleton<IMessageBus>(sp => sp.GetRequiredService<MessageBus>());
                     services.AddSingleton<ApplicationCore>();

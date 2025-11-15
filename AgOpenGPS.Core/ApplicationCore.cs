@@ -15,6 +15,7 @@ public class ApplicationCore : IDisposable
     private readonly IConfiguration _configuration;
     private readonly ILogger<ApplicationCore> _logger;
     private readonly MessageBus _messageBus;
+    private readonly ITimeProvider _timeProvider;
     private readonly ModuleManager _moduleManager;
     private readonly CancellationTokenSource _shutdownCts = new();
     private volatile bool _disposed;
@@ -23,17 +24,20 @@ public class ApplicationCore : IDisposable
         IServiceProvider services,
         IConfiguration configuration,
         ILogger<ApplicationCore> logger,
-        MessageBus messageBus)
+        MessageBus messageBus,
+        ITimeProvider timeProvider)
     {
         _services = services;
         _configuration = configuration;
         _logger = logger;
         _messageBus = messageBus;
+        _timeProvider = timeProvider;
         _moduleManager = new ModuleManager(
             _services,
             _configuration,
             _services.GetRequiredService<ILogger<ModuleManager>>(),
-            _messageBus
+            _messageBus,
+            _timeProvider
         );
     }
 
@@ -71,7 +75,7 @@ public class ApplicationCore : IDisposable
         // 4. Publish application started event
         _messageBus.Publish(new ApplicationStartedEvent
         {
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            TimestampMs = _timeProvider.UnixTimeMilliseconds
         });
 
         var loadedCount = _moduleManager.GetLoadedModules().Count;
@@ -87,7 +91,7 @@ public class ApplicationCore : IDisposable
 
         _messageBus.Publish(new ApplicationStoppingEvent
         {
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            TimestampMs = _timeProvider.UnixTimeMilliseconds
         });
 
         // Shutdown all modules via ModuleManager

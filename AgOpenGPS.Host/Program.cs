@@ -13,6 +13,9 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
         // Register core services
+        // TimeProvider - use SystemTimeProvider for real-time operation
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+
         // MessageBus must be registered as both concrete type and interface
         services.AddSingleton<MessageBus>();
         services.AddSingleton<IMessageBus>(sp => sp.GetRequiredService<MessageBus>());

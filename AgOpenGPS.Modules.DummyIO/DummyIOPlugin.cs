@@ -19,6 +19,7 @@ public class DummyIOPlugin : IAgModule
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
+    private ITimeProvider? _timeProvider;
     private CancellationToken _shutdownToken;
     private Task? _simulationTask;
 
@@ -39,6 +40,7 @@ public class DummyIOPlugin : IAgModule
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
+        _timeProvider = context.TimeProvider;
         _shutdownToken = context.AppShutdownToken;
 
         // Subscribe to outbound steer commands from PGN
@@ -80,7 +82,15 @@ public class DummyIOPlugin : IAgModule
             // Generate and publish GPS sentence
             PublishGPSData();
 
-            await Task.Delay(updateInterval, _shutdownToken);
+            // Use time provider for delays (supports simulation/fast-forward)
+            if (_timeProvider != null)
+            {
+                await _timeProvider.Delay(updateInterval, _shutdownToken);
+            }
+            else
+            {
+                await Task.Delay(updateInterval, _shutdownToken);
+            }
         }
     }
 
@@ -119,10 +129,11 @@ public class DummyIOPlugin : IAgModule
     /// </summary>
     private void PublishGPSData()
     {
-        if (_messageBus == null) return;
+        if (_messageBus == null || _timeProvider == null) return;
 
-        string time = DateTime.UtcNow.ToString("HHmmss.ff");
-        string date = DateTime.UtcNow.ToString("ddMMyy");
+        var currentTime = _timeProvider.UtcNow;
+        string time = currentTime.ToString("HHmmss.ff");
+        string date = currentTime.ToString("ddMMyy");
 
         // Convert latitude to NMEA format (DDMM.MMMM)
         int latDeg = (int)Math.Abs(_latitude);
@@ -154,7 +165,7 @@ public class DummyIOPlugin : IAgModule
         {
             Data = Encoding.ASCII.GetBytes(gga),
             Channel = IOChannel.Serial,
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            TimestampMs = _timeProvider.UnixTimeMilliseconds
         };
         _messageBus.Publish(in ggaMessage);
 
@@ -163,12 +174,12 @@ public class DummyIOPlugin : IAgModule
         {
             Data = Encoding.ASCII.GetBytes(rmc),
             Channel = IOChannel.Serial,
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            TimestampMs = _timeProvider.UnixTimeMilliseconds
         };
         _messageBus.Publish(in rmcMessage);
 
         // Log every 1 second (every 10th message at 10Hz)
-        if ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 100) % 10 == 0)
+        if ((_timeProvider.UnixTimeMilliseconds / 100) % 10 == 0)
         {
             _logger?.LogInformation($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Speed={_speed:F2}m/s, SteerAngle={_steerAngle:F2}°");
         }

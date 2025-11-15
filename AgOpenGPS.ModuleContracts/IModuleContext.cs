@@ -20,6 +20,9 @@ public interface IModuleContext
     /// <summary>Logger for this module</summary>
     ILogger Logger { get; }
 
+    /// <summary>Time provider for timestamps and delays (supports simulation)</summary>
+    ITimeProvider TimeProvider { get; }
+
     /// <summary>Cancellation token signaling application shutdown</summary>
     CancellationToken AppShutdownToken { get; }
 }

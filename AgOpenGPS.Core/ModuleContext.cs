@@ -10,6 +10,7 @@ public class ModuleContext : IModuleContext
     public IServiceProvider Services { get; }
     public IConfiguration Configuration { get; }
     public ILogger Logger { get; }
+    public ITimeProvider TimeProvider { get; }
     public CancellationToken AppShutdownToken { get; }
 
     public ModuleContext(
@@ -17,12 +18,14 @@ public class ModuleContext : IModuleContext
         IServiceProvider services,
         IConfiguration configuration,
         ILogger logger,
+        ITimeProvider timeProvider,
         CancellationToken appShutdownToken)
     {
         MessageBus = messageBus;
         Services = services;
         Configuration = configuration;
         Logger = logger;
+        TimeProvider = timeProvider;
         AppShutdownToken = appShutdownToken;
     }
 }
