@@ -220,6 +220,7 @@ public class TimingTests
             .Build();
 
         services.AddSingleton<IConfiguration>(config);
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
         services.AddSingleton<MessageBus>();
         services.AddSingleton<ApplicationCore>();
 
