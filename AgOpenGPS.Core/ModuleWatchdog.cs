@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 public class ModuleWatchdog : IDisposable
 {
     private readonly ILogger<ModuleWatchdog> _logger;
-    private readonly ConcurrentDictionary<string, ModuleMonitorState> _monitoredPlugins = new();
+    private readonly ConcurrentDictionary<string, ModuleMonitorState> _monitoredModules = new();
     private readonly Timer _checkTimer;
     private readonly TimeSpan _checkInterval;
     private readonly TimeSpan _hangThreshold;
@@ -28,7 +28,7 @@ public class ModuleWatchdog : IDisposable
         _hangThreshold = hangThreshold ?? TimeSpan.FromSeconds(60);
 
         _checkTimer = new Timer(
-            _ => CheckPlugins(),
+            _ => CheckModules(),
             null,
             _checkInterval,
             _checkInterval);
@@ -43,7 +43,7 @@ public class ModuleWatchdog : IDisposable
     {
         if (_disposed) return new NullMonitor();
 
-        var state = _monitoredPlugins.GetOrAdd(moduleId, _ => new ModuleMonitorState(moduleId));
+        var state = _monitoredModules.GetOrAdd(moduleId, _ => new ModuleMonitorState(moduleId));
 
         var operation = new OperationMonitor
         {
@@ -58,13 +58,13 @@ public class ModuleWatchdog : IDisposable
     }
 
     /// <summary>
-    /// Record a heartbeat from a plugin
+    /// Record a heartbeat from a module
     /// </summary>
     public void Heartbeat(string moduleId)
     {
         if (_disposed) return;
 
-        var state = _monitoredPlugins.GetOrAdd(moduleId, _ => new ModuleMonitorState(moduleId));
+        var state = _monitoredModules.GetOrAdd(moduleId, _ => new ModuleMonitorState(moduleId));
         state.RecordHeartbeat();
     }
 
@@ -73,7 +73,7 @@ public class ModuleWatchdog : IDisposable
     /// </summary>
     public void StopMonitoring(string moduleId)
     {
-        _monitoredPlugins.TryRemove(moduleId, out _);
+        _monitoredModules.TryRemove(moduleId, out _);
         _logger.LogDebug($"Stopped monitoring module {moduleId}");
     }
 
@@ -82,18 +82,18 @@ public class ModuleWatchdog : IDisposable
     /// </summary>
     public List<ModuleMonitorStats> GetStatistics()
     {
-        return _monitoredPlugins.Values
+        return _monitoredModules.Values
             .Select(state => state.GetStats())
             .ToList();
     }
 
-    private void CheckPlugins()
+    private void CheckModules()
     {
         if (_disposed) return;
 
         var now = DateTime.UtcNow;
 
-        foreach (var state in _monitoredPlugins.Values)
+        foreach (var state in _monitoredModules.Values)
         {
             // Check for long-running operations
             var longRunningOps = state.GetLongRunningOperations(now, _hangThreshold);
@@ -136,7 +136,7 @@ public class ModuleWatchdog : IDisposable
 
         _disposed = true;
         _checkTimer?.Dispose();
-        _monitoredPlugins.Clear();
+        _monitoredModules.Clear();
 
         _logger.LogInformation("Module watchdog stopped");
     }
@@ -167,7 +167,7 @@ public class ModuleWatchdog : IDisposable
 }
 
 /// <summary>
-/// Tracks monitoring state for a single plugin
+/// Tracks monitoring state for a single module
 /// </summary>
 internal class ModuleMonitorState
 {

@@ -23,7 +23,6 @@ public class MonitoringModule : IAgModule
     private readonly ConcurrentDictionary<Type, MessageTypeMetrics> _messageMetrics = new();
     private readonly Stopwatch _uptime = new();
     private long _totalMessagesProcessed;
-    private long _totalErrors;
 
     public Task InitializeAsync(IModuleContext context)
     {
@@ -63,8 +62,8 @@ public class MonitoringModule : IAgModule
 
     public ModuleHealth GetHealth()
     {
-        // Monitor is always healthy unless it has critical errors
-        return _totalErrors > 100 ? ModuleHealth.Degraded : ModuleHealth.Healthy;
+        // Monitor is always healthy
+        return ModuleHealth.Healthy;
     }
 
     private void SubscribeToMessages()
@@ -124,7 +123,6 @@ public class MonitoringModule : IAgModule
             UptimeSeconds = _uptime.Elapsed.TotalSeconds,
             TotalMessagesProcessed = Interlocked.Read(ref _totalMessagesProcessed),
             MessagesPerSecond = Interlocked.Read(ref _totalMessagesProcessed) / Math.Max(1, _uptime.Elapsed.TotalSeconds),
-            TotalErrors = Interlocked.Read(ref _totalErrors),
             ModuleCount = _moduleMetrics.Count,
             MessageTypes = _messageMetrics.Values.ToList(),
             Modules = _moduleMetrics.Values.ToList()
@@ -145,7 +143,6 @@ public class MonitoringModule : IAgModule
         _logger?.LogInformation($"Uptime: {_uptime.Elapsed}");
         _logger?.LogInformation($"Total Messages: {_totalMessagesProcessed:N0}");
         _logger?.LogInformation($"Avg Throughput: {_totalMessagesProcessed / Math.Max(1, _uptime.Elapsed.TotalSeconds):F2} msg/sec");
-        _logger?.LogInformation($"Total Errors: {_totalErrors}");
         _logger?.LogInformation($"Tracked Modules: {_moduleMetrics.Count}");
 
         _logger?.LogInformation("\nMessage Type Breakdown:");
@@ -164,7 +161,6 @@ public class SystemMetrics
     public double UptimeSeconds { get; set; }
     public long TotalMessagesProcessed { get; set; }
     public double MessagesPerSecond { get; set; }
-    public long TotalErrors { get; set; }
     public int ModuleCount { get; set; }
     public List<MessageTypeMetrics> MessageTypes { get; set; } = new();
     public List<ModuleMetrics> Modules { get; set; } = new();

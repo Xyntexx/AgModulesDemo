@@ -14,7 +14,7 @@ public static class SafeModuleExecutor
     public static async Task<OperationResult> ExecuteSafelyAsync(
         Func<Task> operation,
         string operationName,
-        string pluginName,
+        string moduleName,
         ILogger logger)
     {
         try
@@ -25,69 +25,69 @@ public static class SafeModuleExecutor
         catch (OperationCanceledException)
         {
             // Expected during shutdown
-            logger.LogDebug($"{operationName} cancelled for module {pluginName}");
+            logger.LogDebug($"{operationName} cancelled for module {moduleName}");
             return OperationResult.Cancelled();
         }
         catch (OutOfMemoryException ex)
         {
             // Critical - log and try to continue
-            logger.LogCritical(ex, $"OUT OF MEMORY in {pluginName} during {operationName}");
+            logger.LogCritical(ex, $"OUT OF MEMORY in {moduleName} during {operationName}");
             GC.Collect(2, GCCollectionMode.Forced, true, true);
             return OperationResult.Failure($"Out of memory: {ex.Message}", isFatal: true);
         }
         catch (StackOverflowException ex)
         {
             // Cannot actually catch this, but included for documentation
-            logger.LogCritical(ex, $"STACK OVERFLOW in {pluginName} during {operationName} - PROCESS WILL CRASH");
+            logger.LogCritical(ex, $"STACK OVERFLOW in {moduleName} during {operationName} - PROCESS WILL CRASH");
             return OperationResult.Failure("Stack overflow - process terminating", isFatal: true);
         }
         catch (AccessViolationException ex)
         {
             // Native memory corruption
-            logger.LogCritical(ex, $"ACCESS VIOLATION in {pluginName} during {operationName}");
+            logger.LogCritical(ex, $"ACCESS VIOLATION in {moduleName} during {operationName}");
             return OperationResult.Failure($"Access violation (native crash): {ex.Message}", isFatal: true);
         }
         catch (TypeInitializationException ex)
         {
             // Static constructor failed
-            logger.LogError(ex, $"Type initialization failed in {pluginName} during {operationName}");
+            logger.LogError(ex, $"Type initialization failed in {moduleName} during {operationName}");
             return OperationResult.Failure($"Type initialization error: {ex.InnerException?.Message ?? ex.Message}");
         }
         catch (TypeLoadException ex)
         {
             // Assembly loading issue
-            logger.LogError(ex, $"Type load failed in {pluginName} during {operationName}");
+            logger.LogError(ex, $"Type load failed in {moduleName} during {operationName}");
             return OperationResult.Failure($"Type load error: {ex.Message}");
         }
         catch (System.IO.IOException ex)
         {
             // File/IO errors
-            logger.LogError(ex, $"IO error in {pluginName} during {operationName}");
+            logger.LogError(ex, $"IO error in {moduleName} during {operationName}");
             return OperationResult.Failure($"IO error: {ex.Message}");
         }
         catch (UnauthorizedAccessException ex)
         {
             // Permission issues
-            logger.LogError(ex, $"Access denied in {pluginName} during {operationName}");
+            logger.LogError(ex, $"Access denied in {moduleName} during {operationName}");
             return OperationResult.Failure($"Access denied: {ex.Message}");
         }
         catch (AggregateException ex)
         {
             // Multiple exceptions from tasks
-            logger.LogError(ex, $"Multiple errors in {pluginName} during {operationName}");
+            logger.LogError(ex, $"Multiple errors in {moduleName} during {operationName}");
             var messages = string.Join("; ", ex.InnerExceptions.Select(e => e.Message));
             return OperationResult.Failure($"Multiple errors: {messages}");
         }
         catch (Exception ex) when (IsFatalException(ex))
         {
             // Fatal exceptions that we can catch but indicate serious problems
-            logger.LogCritical(ex, $"FATAL EXCEPTION in {pluginName} during {operationName}");
+            logger.LogCritical(ex, $"FATAL EXCEPTION in {moduleName} during {operationName}");
             return OperationResult.Failure($"Fatal error: {ex.Message}", isFatal: true);
         }
         catch (Exception ex)
         {
             // All other managed exceptions
-            logger.LogError(ex, $"Error in {pluginName} during {operationName}");
+            logger.LogError(ex, $"Error in {moduleName} during {operationName}");
             return OperationResult.Failure($"{ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -98,7 +98,7 @@ public static class SafeModuleExecutor
     public static OperationResult ExecuteSafely(
         Action operation,
         string operationName,
-        string pluginName,
+        string moduleName,
         ILogger logger)
     {
         try
@@ -108,28 +108,28 @@ public static class SafeModuleExecutor
         }
         catch (OperationCanceledException)
         {
-            logger.LogDebug($"{operationName} cancelled for module {pluginName}");
+            logger.LogDebug($"{operationName} cancelled for module {moduleName}");
             return OperationResult.Cancelled();
         }
         catch (OutOfMemoryException ex)
         {
-            logger.LogCritical(ex, $"OUT OF MEMORY in {pluginName} during {operationName}");
+            logger.LogCritical(ex, $"OUT OF MEMORY in {moduleName} during {operationName}");
             GC.Collect(2, GCCollectionMode.Forced, true, true);
             return OperationResult.Failure($"Out of memory: {ex.Message}", isFatal: true);
         }
         catch (AccessViolationException ex)
         {
-            logger.LogCritical(ex, $"ACCESS VIOLATION in {pluginName} during {operationName}");
+            logger.LogCritical(ex, $"ACCESS VIOLATION in {moduleName} during {operationName}");
             return OperationResult.Failure($"Access violation (native crash): {ex.Message}", isFatal: true);
         }
         catch (Exception ex) when (IsFatalException(ex))
         {
-            logger.LogCritical(ex, $"FATAL EXCEPTION in {pluginName} during {operationName}");
+            logger.LogCritical(ex, $"FATAL EXCEPTION in {moduleName} during {operationName}");
             return OperationResult.Failure($"Fatal error: {ex.Message}", isFatal: true);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, $"Error in {pluginName} during {operationName}");
+            logger.LogError(ex, $"Error in {moduleName} during {operationName}");
             return OperationResult.Failure($"{ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -141,18 +141,18 @@ public static class SafeModuleExecutor
         Func<Task> operation,
         TimeSpan timeout,
         string operationName,
-        string pluginName,
+        string moduleName,
         ILogger logger)
     {
         using var cts = new CancellationTokenSource();
-        var operationTask = ExecuteSafelyAsync(operation, operationName, pluginName, logger);
+        var operationTask = ExecuteSafelyAsync(operation, operationName, moduleName, logger);
         var timeoutTask = Task.Delay(timeout, cts.Token);
 
         var completedTask = await Task.WhenAny(operationTask, timeoutTask);
 
         if (completedTask == timeoutTask)
         {
-            logger.LogWarning($"{operationName} timed out after {timeout.TotalSeconds}s for module {pluginName}");
+            logger.LogWarning($"{operationName} timed out after {timeout.TotalSeconds}s for module {moduleName}");
             return OperationResult.Failure($"Operation timed out after {timeout.TotalSeconds}s");
         }
 

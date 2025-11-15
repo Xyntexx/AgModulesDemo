@@ -135,7 +135,6 @@ public class LoadTests
         _output.WriteLine($"\nSystem Metrics:");
         _output.WriteLine($"  Total Messages: {metrics.TotalMessagesProcessed:N0}");
         _output.WriteLine($"  Throughput: {metrics.MessagesPerSecond:F0} msg/sec");
-        _output.WriteLine($"  Errors: {metrics.TotalErrors}");
 
         // Cleanup
         await core.StopAsync();

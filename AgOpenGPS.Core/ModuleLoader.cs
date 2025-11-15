@@ -56,13 +56,13 @@ public class ModuleLoader
     /// <summary>
     /// Resolve module load order based on dependencies and categories
     /// </summary>
-    public List<IAgModule> ResolveLoadOrder(List<IAgModule> plugins)
+    public List<IAgModule> ResolveLoadOrder(List<IAgModule> modules)
     {
         // Create a logger for the resolver using the factory
         var resolverLogger = Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<ModuleDependencyResolver>(
             Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var resolver = new ModuleDependencyResolver(resolverLogger);
-        return resolver.ResolveLoadOrder(plugins);
+        return resolver.ResolveLoadOrder(modules);
     }
 }

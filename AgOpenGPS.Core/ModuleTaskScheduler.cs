@@ -29,7 +29,7 @@ public class ModuleTaskScheduler
 
         var tcs = new TaskCompletionSource<T>();
 
-        // Queue work on plugin's dedicated thread pool
+        // Queue work on module's dedicated thread pool
         threadPool.QueueWork(async () =>
         {
             try
@@ -77,7 +77,7 @@ public class ModuleTaskScheduler
     }
 
     /// <summary>
-    /// Cleanup thread pool for a plugin
+    /// Cleanup thread pool for a module
     /// </summary>
     public void CleanupModule(string moduleId)
     {
@@ -100,7 +100,7 @@ public class ModuleTaskScheduler
 }
 
 /// <summary>
-/// Dedicated thread pool for a single plugin
+/// Dedicated thread pool for a single module
 /// </summary>
 internal class ModuleThreadPool : IDisposable
 {
@@ -123,12 +123,12 @@ internal class ModuleThreadPool : IDisposable
         _threads = new List<Thread>();
         _cts = new CancellationTokenSource();
 
-        // Start dedicated threads for this plugin
+        // Start dedicated threads for this module
         for (int i = 0; i < threadCount; i++)
         {
             var thread = new Thread(WorkerThread)
             {
-                Name = $"Plugin-{_moduleId}-Worker-{i}",
+                Name = $"Module-{_moduleId}-Worker-{i}",
                 IsBackground = true,
                 Priority = ThreadPriority.Normal
             };
@@ -178,6 +178,10 @@ internal class ModuleThreadPool : IDisposable
         catch (OperationCanceledException)
         {
             // Expected during shutdown
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when collection is disposed during shutdown
         }
 
         _logger.LogTrace($"Worker thread stopped for module {_moduleId}");

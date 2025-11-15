@@ -11,7 +11,8 @@
       "Bash(dotnet clean:*)",
       "Read(//c/Projects/AgOpenGPS-Nexus/**)",
       "Bash(cd:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "ask": []

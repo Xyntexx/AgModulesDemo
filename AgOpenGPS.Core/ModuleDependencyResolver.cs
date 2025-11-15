@@ -19,15 +19,15 @@ public class ModuleDependencyResolver
     /// Resolve module load order based on dependencies and categories
     /// Throws if circular dependencies detected
     /// </summary>
-    public List<IAgModule> ResolveLoadOrder(List<IAgModule> plugins)
+    public List<IAgModule> ResolveLoadOrder(List<IAgModule> modules)
     {
-        if (!plugins.Any())
+        if (!modules.Any())
         {
             return new List<IAgModule>();
         }
 
         // Build dependency graph
-        var graph = BuildDependencyGraph(plugins);
+        var graph = BuildDependencyGraph(modules);
 
         // Detect circular dependencies
         var cycles = DetectCycles(graph);
@@ -51,12 +51,12 @@ public class ModuleDependencyResolver
         return result;
     }
 
-    private Dictionary<string, DependencyNode> BuildDependencyGraph(List<IAgModule> plugins)
+    private Dictionary<string, DependencyNode> BuildDependencyGraph(List<IAgModule> modules)
     {
         var graph = new Dictionary<string, DependencyNode>(StringComparer.OrdinalIgnoreCase);
 
         // Create nodes
-        foreach (var module in plugins)
+        foreach (var module in modules)
         {
             graph[module.Name] = new DependencyNode
             {
@@ -166,9 +166,9 @@ public class ModuleDependencyResolver
         sorted.Add(graph[node].Module);
     }
 
-    private int GetDependencyLevel(IAgModule plugin, Dictionary<string, DependencyNode> graph)
+    private int GetDependencyLevel(IAgModule module, Dictionary<string, DependencyNode> graph)
     {
-        if (!graph.TryGetValue(plugin.Name, out var node))
+        if (!graph.TryGetValue(module.Name, out var node))
         {
             return 0;
         }
