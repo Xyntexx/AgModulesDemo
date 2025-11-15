@@ -119,18 +119,19 @@ public class PGNPlugin : IAgModule
         try
         {
             // Example: Simple binary protocol
-            // Format: [Header][Angle][Speed][Checksum]
-            var data = new byte[6];
+            // Format: [Header][Angle][Speed][Engaged][Checksum][Footer]
+            var data = new byte[7];
             data[0] = 0xFE; // Header
             data[1] = 0x01; // Steer command ID
 
             // Encode angle (-45 to +45 as 0-255)
             data[2] = (byte)((cmd.SteerAngleDegrees + 45) * 255 / 90);
             data[3] = cmd.SpeedPWM;
+            data[4] = (byte)(cmd.IsEngaged ? 1 : 0); // Engage status
 
             // Simple checksum
-            data[4] = (byte)((data[2] + data[3]) & 0xFF);
-            data[5] = 0xFF; // Footer
+            data[5] = (byte)((data[2] + data[3] + data[4]) & 0xFF);
+            data[6] = 0xFF; // Footer
 
             var sendMsg = new RawDataToSendMessage
             {

@@ -39,13 +39,17 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
         // Subscribe to guidance line updates
         _messageBus.Subscribe<GuidanceLineMessage>(OnGuidanceUpdate);
 
+        // Subscribe to engage/disengage commands from UI
+        _messageBus.Subscribe<AutosteerEngageMessage>(OnEngageCommand);
+
         _logger.LogInformation("Autosteer initialized");
         return Task.CompletedTask;
     }
 
     public Task StartAsync()
     {
-        _engaged = true;
+        // Start disengaged - wait for UI command
+        _engaged = false;
 
         // Set a default target heading for testing (90 degrees = due East)
         _targetHeading = 90.0;
@@ -64,7 +68,7 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
             _logger?.LogInformation($"Published test guidance line: Heading {guidanceLine.HeadingDegrees}°");
         }
 
-        _logger?.LogInformation("Autosteer engaged");
+        _logger?.LogInformation("Autosteer module started (disengaged)");
         return Task.CompletedTask;
     }
 
@@ -95,6 +99,35 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
         if (_engaged)
         {
             CalculateAndSendSteerCommand();
+        }
+    }
+
+    private void OnEngageCommand(AutosteerEngageMessage msg)
+    {
+        _engaged = msg.IsEngaged;
+
+        if (_engaged)
+        {
+            // Reset PID state when engaging
+            _integral = 0;
+            _lastError = 0;
+            _logger?.LogInformation("Autosteer ENGAGED");
+        }
+        else
+        {
+            // Send zero steer command when disengaging
+            if (_messageBus != null)
+            {
+                var cmd = new SteerCommandMessage
+                {
+                    SteerAngleDegrees = 0,
+                    SpeedPWM = 0,
+                    IsEngaged = false,
+                    TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                _messageBus.Publish(in cmd);
+            }
+            _logger?.LogInformation("Autosteer DISENGAGED");
         }
     }
 
@@ -129,6 +162,7 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
         {
             SteerAngleDegrees = steerAngle,
             SpeedPWM = 200, // Full speed
+            IsEngaged = _engaged,
             TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 

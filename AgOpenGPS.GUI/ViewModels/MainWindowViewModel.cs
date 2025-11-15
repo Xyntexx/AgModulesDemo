@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using AgOpenGPS.Core;
 using AgOpenGPS.ModuleContracts;
 using AgOpenGPS.ModuleContracts.Messages;
@@ -37,6 +38,9 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _autosteerEngaged = false;
 
     [ObservableProperty]
+    private string _autosteerButtonText = "ENGAGE AUTOSTEER";
+
+    [ObservableProperty]
     private ObservableCollection<string> _logMessages = new();
 
     public void Initialize(ApplicationCore core, IMessageBus messageBus)
@@ -66,6 +70,38 @@ public partial class MainWindowViewModel : ObservableObject
     private void OnSteerCommand(SteerCommandMessage msg)
     {
         SteerAngle = $"{msg.SteerAngleDegrees:F2}°";
+
+        // Update engaged status from steer command
+        if (AutosteerEngaged != msg.IsEngaged)
+        {
+            AutosteerEngaged = msg.IsEngaged;
+            AutosteerButtonText = AutosteerEngaged ? "DISENGAGE AUTOSTEER" : "ENGAGE AUTOSTEER";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleAutosteer()
+    {
+        if (_messageBus == null)
+        {
+            AddLog("ERROR: Message bus not available");
+            return;
+        }
+
+        // Toggle state
+        AutosteerEngaged = !AutosteerEngaged;
+        AutosteerButtonText = AutosteerEngaged ? "DISENGAGE AUTOSTEER" : "ENGAGE AUTOSTEER";
+
+        // Send engage message
+        var msg = new AutosteerEngageMessage
+        {
+            IsEngaged = AutosteerEngaged,
+            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+
+        _messageBus.Publish(in msg);
+
+        AddLog($"Autosteer {(AutosteerEngaged ? "ENGAGED" : "DISENGAGED")}");
     }
 
     private void AddLog(string message)
