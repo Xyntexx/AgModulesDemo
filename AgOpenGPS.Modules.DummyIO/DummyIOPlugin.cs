@@ -115,15 +115,14 @@ public class DummyIOPlugin : IAgModule
     }
 
     /// <summary>
-    /// Generate NMEA GGA sentence and publish as raw data
+    /// Generate NMEA GGA and RMC sentences and publish as raw data
     /// </summary>
     private void PublishGPSData()
     {
         if (_messageBus == null) return;
 
-        // Generate NMEA GGA sentence
-        // $GPGGA,time,lat,N/S,lon,E/W,quality,sats,hdop,alt,M,geoid,M,age,station*checksum
         string time = DateTime.UtcNow.ToString("HHmmss.ff");
+        string date = DateTime.UtcNow.ToString("ddMMyy");
 
         // Convert latitude to NMEA format (DDMM.MMMM)
         int latDeg = (int)Math.Abs(_latitude);
@@ -137,31 +136,53 @@ public class DummyIOPlugin : IAgModule
         string lonStr = FormattableString.Invariant($"{lonDeg:D3}{lonMin:00.0000}");
         string lonDir = _longitude >= 0 ? "E" : "W";
 
+        // Generate NMEA GGA sentence (position and fix quality)
+        // $GPGGA,time,lat,N/S,lon,E/W,quality,sats,hdop,alt,M,geoid,M,age,station*checksum
         string gga = $"$GPGGA,{time},{latStr},{latDir},{lonStr},{lonDir},4,12,0.9,50.0,M,0.0,M,,";
+        gga += $"*{CalculateChecksum(gga):X2}\r\n";
 
-        // Calculate checksum
-        byte checksum = 0;
-        for (int i = 1; i < gga.Length; i++)
-        {
-            checksum ^= (byte)gga[i];
-        }
-        gga += $"*{checksum:X2}\r\n";
+        // Generate NMEA RMC sentence (includes speed and heading)
+        // $GPRMC,time,status,lat,N/S,lon,E/W,speed,heading,date,magvar,E/W,mode*checksum
+        double speedKnots = _speed * 1.94384; // Convert m/s to knots
+        string rmc = $"$GPRMC,{time},A,{latStr},{latDir},{lonStr},{lonDir},{speedKnots:F2},{_heading:F2},{date},,";
+        rmc += $"*{CalculateChecksum(rmc):X2}\r\n";
 
-        // Publish as raw data
-        var message = new RawDataReceivedMessage
+        // Publish GGA
+        var ggaMessage = new RawDataReceivedMessage
         {
             Data = Encoding.ASCII.GetBytes(gga),
             Channel = IOChannel.Serial,
             TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
+        _messageBus.Publish(in ggaMessage);
 
-        _messageBus.Publish(in message);
+        // Publish RMC
+        var rmcMessage = new RawDataReceivedMessage
+        {
+            Data = Encoding.ASCII.GetBytes(rmc),
+            Channel = IOChannel.Serial,
+            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+        _messageBus.Publish(in rmcMessage);
 
         // Log every 1 second (every 10th message at 10Hz)
         if ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 100) % 10 == 0)
         {
-            _logger?.LogDebug($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Steer={_steerAngle:F1}°");
+            _logger?.LogDebug($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Speed={_speed:F2}m/s, Steer={_steerAngle:F1}°");
         }
+    }
+
+    /// <summary>
+    /// Calculate NMEA checksum
+    /// </summary>
+    private byte CalculateChecksum(string sentence)
+    {
+        byte checksum = 0;
+        for (int i = 1; i < sentence.Length; i++)
+        {
+            checksum ^= (byte)sentence[i];
+        }
+        return checksum;
     }
 
     /// <summary>

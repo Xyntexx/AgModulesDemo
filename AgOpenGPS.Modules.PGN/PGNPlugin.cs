@@ -50,7 +50,7 @@ public class PGNPlugin : IAgModule
         {
             data = Encoding.ASCII.GetString(raw.Data);
 
-            // Simple NMEA GPS parsing (GGA sentence)
+            // Parse NMEA GGA sentence (position and fix quality)
             if (data.StartsWith("$GPGGA") || data.StartsWith("$GNGGA"))
             {
                 var parts = data.Split(',');
@@ -74,6 +74,34 @@ public class PGNPlugin : IAgModule
 
                     _messageBus.Publish(in gpsMsg);
                     _logger?.LogDebug($"GPS: {lat:F6}, {lon:F6}, Fix: {quality}");
+                }
+            }
+            // Parse NMEA RMC sentence (includes speed and heading)
+            else if (data.StartsWith("$GPRMC") || data.StartsWith("$GNRMC"))
+            {
+                var parts = data.Split(',');
+                if (parts.Length > 8 && parts[2] == "A") // A = Active/Valid
+                {
+                    var lat = ParseCoordinate(parts[3], parts[4]);
+                    var lon = ParseCoordinate(parts[5], parts[6]);
+                    var speedKnots = double.Parse(parts[7], System.Globalization.CultureInfo.InvariantCulture);
+                    var heading = double.Parse(parts[8], System.Globalization.CultureInfo.InvariantCulture);
+
+                    // Convert knots to m/s
+                    var speedMs = speedKnots * 0.514444;
+
+                    var gpsMsg = new GpsPositionMessage
+                    {
+                        Latitude = lat,
+                        Longitude = lon,
+                        Speed = speedMs,
+                        Heading = heading,
+                        FixQuality = GpsFixQuality.RTK_Fixed, // Assume good fix if RMC is valid
+                        TimestampMs = raw.TimestampMs
+                    };
+
+                    _messageBus.Publish(in gpsMsg);
+                    _logger?.LogDebug($"GPS: {lat:F6}, {lon:F6}, Heading: {heading:F1}°, Speed: {speedMs:F2}m/s");
                 }
             }
         }
