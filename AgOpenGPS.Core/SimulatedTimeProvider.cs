@@ -4,13 +4,16 @@ using AgOpenGPS.ModuleContracts;
 using System.Collections.Concurrent;
 
 /// <summary>
-/// Simulated time provider for testing and fast-forward scenarios
-/// Allows manual time control, time scaling, and instant delays
-/// Thread-safe for concurrent access
+/// Simulated time provider for testing and fast-forward scenarios.
+/// Provides both monotonic time (for determinism) and wall clock time (for display).
+/// Allows manual time control, time scaling, and instant delays.
+/// Thread-safe for concurrent access.
 /// </summary>
 public class SimulatedTimeProvider : ITimeProvider
 {
-    private DateTimeOffset _currentTime;
+    private long _monotonicMs;  // Monotonic time in milliseconds
+    private DateTimeOffset _wallClockTime;  // Wall clock time (for display)
+    private readonly long _unixEpochOffsetMs;  // Offset to convert monotonic to Unix epoch
     private double _timeScale = 1.0;
     private readonly object _lock = new object();
     private readonly ConcurrentDictionary<Guid, DelayOperation> _pendingDelays = new();
@@ -18,22 +21,57 @@ public class SimulatedTimeProvider : ITimeProvider
     /// <summary>
     /// Creates a simulated time provider starting at the given time
     /// </summary>
-    /// <param name="startTime">Initial time (defaults to current UTC time)</param>
-    public SimulatedTimeProvider(DateTimeOffset? startTime = null)
+    /// <param name="startTime">Initial wall clock time (defaults to current UTC time)</param>
+    /// <param name="startMonotonicMs">Initial monotonic time in ms (defaults to 0)</param>
+    public SimulatedTimeProvider(DateTimeOffset? startTime = null, long startMonotonicMs = 0)
     {
-        _currentTime = startTime ?? DateTimeOffset.UtcNow;
+        _wallClockTime = startTime ?? DateTimeOffset.UtcNow;
+        _monotonicMs = startMonotonicMs;
+
+        // Calculate offset: wall clock at start - monotonic at start
+        _unixEpochOffsetMs = _wallClockTime.ToUnixTimeMilliseconds() - _monotonicMs;
     }
 
+    /// <summary>
+    /// Monotonic clock: milliseconds since simulation start (never goes backward).
+    /// Deterministic and controllable for testing.
+    /// </summary>
+    public long MonotonicMilliseconds
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _monotonicMs;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Wall clock: current simulated UTC time (for display).
+    /// </summary>
     public DateTimeOffset UtcNow
     {
         get
         {
             lock (_lock)
             {
-                return _currentTime;
+                return _wallClockTime;
             }
         }
     }
+
+    /// <summary>
+    /// Offset to convert monotonic time to Unix epoch time.
+    /// Fixed at initialization for consistency.
+    /// </summary>
+    public long UnixEpochOffsetMs => _unixEpochOffsetMs;
+
+    /// <summary>
+    /// Unix timestamp for message timestamping (monotonic-based).
+    /// Uses: MonotonicMilliseconds + UnixEpochOffsetMs
+    /// </summary>
+    public long UnixTimeMilliseconds => MonotonicMilliseconds + UnixEpochOffsetMs;
 
     /// <summary>
     /// Gets or sets the time scale multiplier
@@ -58,42 +96,67 @@ public class SimulatedTimeProvider : ITimeProvider
     }
 
     /// <summary>
-    /// Manually advances time by the specified duration
-    /// Completes any delays that expire during this advance
+    /// Manually advances time by the specified duration.
+    /// Advances both monotonic and wall clock time.
+    /// Completes any delays that expire during this advance.
     /// </summary>
     public void Advance(TimeSpan duration)
     {
         if (duration <= TimeSpan.Zero)
             return;
 
-        DateTimeOffset newTime;
+        DateTimeOffset newWallTime;
         lock (_lock)
         {
-            _currentTime = _currentTime.Add(duration);
-            newTime = _currentTime;
+            _monotonicMs += (long)duration.TotalMilliseconds;
+            _wallClockTime = _wallClockTime.Add(duration);
+            newWallTime = _wallClockTime;
         }
 
         // Complete any delays that have expired
-        CompleteExpiredDelays(newTime);
+        CompleteExpiredDelays(newWallTime);
     }
 
     /// <summary>
-    /// Sets the current time to a specific value
-    /// Only allows moving forward in time
+    /// Sets the wall clock time to a specific value.
+    /// Only allows moving forward in time.
+    /// Also advances monotonic time by the same amount.
     /// </summary>
     public void SetTime(DateTimeOffset time)
     {
-        DateTimeOffset newTime;
+        DateTimeOffset newWallTime;
         lock (_lock)
         {
-            if (time < _currentTime)
+            if (time < _wallClockTime)
                 throw new ArgumentException("Cannot move time backwards", nameof(time));
 
-            _currentTime = time;
-            newTime = _currentTime;
+            var delta = time - _wallClockTime;
+            _monotonicMs += (long)delta.TotalMilliseconds;
+            _wallClockTime = time;
+            newWallTime = _wallClockTime;
         }
 
-        CompleteExpiredDelays(newTime);
+        CompleteExpiredDelays(newWallTime);
+    }
+
+    /// <summary>
+    /// Manually advances monotonic time by the specified milliseconds.
+    /// Does NOT advance wall clock (useful for testing clock skew scenarios).
+    /// </summary>
+    public void AdvanceMonotonic(long milliseconds)
+    {
+        if (milliseconds <= 0)
+            return;
+
+        DateTimeOffset wallTime;
+        lock (_lock)
+        {
+            _monotonicMs += milliseconds;
+            wallTime = _wallClockTime;
+        }
+
+        // Note: We use wall clock for delay deadlines, so this won't complete delays
+        // This is intentional - monotonic time is for message timestamps, not delays
     }
 
     /// <summary>
