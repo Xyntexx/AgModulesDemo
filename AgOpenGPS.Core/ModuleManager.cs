@@ -17,6 +17,7 @@ public class ModuleManager : IDisposable
     private readonly ILogger<ModuleManager> _logger;
     private readonly MessageBus _messageBus;
     private readonly ITimeProvider _timeProvider;
+    private readonly IScheduler? _scheduler;
     private readonly ConcurrentDictionary<string, ModuleRegistration> _modules = new();
     private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
     private readonly CancellationTokenSource _shutdownCts = new();
@@ -30,13 +31,15 @@ public class ModuleManager : IDisposable
         IConfiguration configuration,
         ILogger<ModuleManager> logger,
         MessageBus messageBus,
-        ITimeProvider timeProvider)
+        ITimeProvider timeProvider,
+        IScheduler? scheduler = null)
     {
         _services = services;
         _configuration = configuration;
         _logger = logger;
         _messageBus = messageBus;
         _timeProvider = timeProvider;
+        _scheduler = scheduler;
         _taskScheduler = new ModuleTaskScheduler(services.GetRequiredService<ILogger<ModuleTaskScheduler>>());
         _watchdog = new ModuleWatchdog(services.GetRequiredService<ILogger<ModuleWatchdog>>());
         _memoryMonitor = new ModuleMemoryMonitor(
@@ -119,8 +122,8 @@ public class ModuleManager : IDisposable
                     _configuration,
                     _logger,
                     _timeProvider,
-                    _shutdownCts.Token
-                );
+                    _shutdownCts.Token,
+                    _scheduler);
 
                 registration.Context = context;
 
@@ -535,7 +538,8 @@ internal class ScopedModuleContext : IModuleContext
         IConfiguration configuration,
         ILogger logger,
         ITimeProvider timeProvider,
-        CancellationToken appShutdownToken)
+        CancellationToken appShutdownToken,
+        IScheduler? scheduler = null)
     {
         _messageBus = messageBus;
         _scope = scope;
@@ -544,6 +548,7 @@ internal class ScopedModuleContext : IModuleContext
         Logger = logger;
         TimeProvider = timeProvider;
         AppShutdownToken = appShutdownToken;
+        Scheduler = scheduler;
     }
 
     public IMessageBus MessageBus => new ScopedMessageBus(_messageBus, _scope);
@@ -552,6 +557,7 @@ internal class ScopedModuleContext : IModuleContext
     public ILogger Logger { get; }
     public ITimeProvider TimeProvider { get; }
     public CancellationToken AppShutdownToken { get; }
+    public IScheduler? Scheduler { get; }
 
     public IMessageQueue CreateMessageQueue()
     {

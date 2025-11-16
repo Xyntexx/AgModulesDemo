@@ -31,4 +31,10 @@ public interface IModuleContext
     /// Tickable modules should call this during initialization and process the queue in Tick().
     /// </summary>
     IMessageQueue CreateMessageQueue();
+
+    /// <summary>
+    /// Get access to the scheduler for registering multiple scheduled methods.
+    /// Returns null if scheduler is disabled.
+    /// </summary>
+    IScheduler? Scheduler { get; }
 }

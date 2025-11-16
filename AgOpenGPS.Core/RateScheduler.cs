@@ -8,16 +8,19 @@ using System.Diagnostics;
 /// Deterministic rate-based scheduler for modules.
 /// Guarantees fixed-rate execution with drift compensation and deterministic ordering.
 /// Provides the tick-based execution model required by SRS R-22-001.
+/// Supports both ITickableModule and standalone scheduled methods.
 /// </summary>
-public class RateScheduler : IDisposable
+public class RateScheduler : IScheduler, IDisposable
 {
     private readonly ITimeProvider _timeProvider;
     private readonly ILogger<RateScheduler> _logger;
     private readonly List<ScheduledModule> _scheduledModules = new();
+    private readonly List<ScheduledMethodInfo> _scheduledMethods = new();
     private readonly Thread? _schedulerThread;
     private readonly CancellationTokenSource _cts = new();
     private long _globalTickNumber = 0;
     private readonly object _lock = new();
+    private int _nextMethodId = 0;
 
     /// <summary>
     /// Scheduler configuration
@@ -77,6 +80,51 @@ public class RateScheduler : IDisposable
             _logger.LogInformation(
                 "Registered {ModuleName} for scheduled execution: Requested={RequestedHz}Hz, Actual={ActualHz}Hz, Divisor={Divisor}",
                 module.Name, scheduled.RequestedRateHz, scheduled.ActualRateHz, scheduled.TickDivisor);
+        }
+    }
+
+    /// <summary>
+    /// Schedule a standalone method for execution at a specific rate
+    /// </summary>
+    public IScheduledMethod Schedule(Action<long, long> method, double rateHz, string? name = null)
+    {
+        lock (_lock)
+        {
+            var divisor = CalculateTickDivisor(rateHz);
+            var actualRateHz = BaseTickRateHz / divisor;
+
+            var methodInfo = new ScheduledMethodInfo
+            {
+                Id = _nextMethodId++,
+                Method = method,
+                Name = name ?? method.Method.Name,
+                RequestedRateHz = rateHz,
+                ActualRateHz = actualRateHz,
+                TickDivisor = divisor
+            };
+
+            _scheduledMethods.Add(methodInfo);
+
+            _logger.LogInformation(
+                "Scheduled method {Name}: Requested={RequestedHz}Hz, Actual={ActualHz}Hz, Divisor={Divisor}",
+                methodInfo.Name, methodInfo.RequestedRateHz, methodInfo.ActualRateHz, methodInfo.TickDivisor);
+
+            return new ScheduledMethodHandle(this, methodInfo);
+        }
+    }
+
+    /// <summary>
+    /// Unschedule a method
+    /// </summary>
+    public void Unschedule(IScheduledMethod handle)
+    {
+        if (handle is ScheduledMethodHandle smh)
+        {
+            lock (_lock)
+            {
+                _scheduledMethods.RemoveAll(m => m.Id == smh.MethodInfo.Id);
+                _logger.LogInformation("Unscheduled method {Name}", smh.Name);
+            }
         }
     }
 
@@ -141,6 +189,7 @@ public class RateScheduler : IDisposable
             {
                 GlobalTickNumber = _globalTickNumber,
                 ModuleCount = _scheduledModules.Count,
+                ScheduledMethodCount = _scheduledMethods.Count,
                 ModuleStats = _scheduledModules.Select(m => new ModuleTickStats
                 {
                     ModuleName = m.Module.Name,
@@ -151,6 +200,17 @@ public class RateScheduler : IDisposable
                     AverageExecutionUs = m.TickCount > 0 ? (m.TotalExecutionMs * 1000.0 / m.TickCount) : 0,
                     MaxExecutionUs = m.MaxExecutionUs,
                     SkippedTicks = m.SkippedTicks
+                }).ToList(),
+                MethodStats = _scheduledMethods.Select(m => new ScheduledMethodStats
+                {
+                    Name = m.Name,
+                    ModuleName = "Standalone",  // Methods don't belong to modules
+                    RequestedRateHz = m.RequestedRateHz,
+                    ActualRateHz = m.ActualRateHz,
+                    CallCount = m.CallCount,
+                    AverageExecutionUs = m.CallCount > 0 ? (m.TotalExecutionMs * 1000.0 / m.CallCount) : 0,
+                    MaxExecutionUs = m.MaxExecutionUs,
+                    IsPaused = m.IsPaused
                 }).ToList()
             };
         }
@@ -226,10 +286,11 @@ public class RateScheduler : IDisposable
     }
 
     /// <summary>
-    /// Execute one tick - call all modules that should run this tick
+    /// Execute one tick - call all modules and methods that should run this tick
     /// </summary>
     private void ExecuteTick(long globalTick, long monotonicMs)
     {
+        // 1. Execute scheduled modules
         foreach (var module in _scheduledModules)
         {
             // Check if this module should run this tick
@@ -263,6 +324,47 @@ public class RateScheduler : IDisposable
                     _logger.LogError(ex, "{ModuleName}.Tick() failed at tick {TickNumber}",
                         module.Module.Name, globalTick);
                     module.SkippedTicks++;
+                }
+            }
+        }
+
+        // 2. Execute scheduled methods
+        foreach (var method in _scheduledMethods)
+        {
+            // Skip if paused
+            if (method.IsPaused)
+                continue;
+
+            // Check if this method should run this tick
+            if (globalTick % method.TickDivisor == 0)
+            {
+                var startMonotonicMs = _timeProvider.MonotonicMilliseconds;
+
+                try
+                {
+                    method.Method(globalTick, monotonicMs);
+
+                    // Track statistics
+                    var executionUs = (_timeProvider.MonotonicMilliseconds - startMonotonicMs) * 1000;
+                    method.CallCount++;
+                    method.TotalExecutionMs += executionUs / 1000.0;
+                    if (executionUs > method.MaxExecutionUs)
+                    {
+                        method.MaxExecutionUs = executionUs;
+                    }
+
+                    // Warn if method took too long
+                    if (executionUs > 1000) // > 1ms
+                    {
+                        _logger.LogWarning(
+                            "Scheduled method {MethodName} took {ExecutionUs}μs (>1ms) - consider optimizing",
+                            method.Name, executionUs);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Scheduled method {MethodName} failed at tick {TickNumber}",
+                        method.Name, globalTick);
                 }
             }
         }
@@ -325,23 +427,51 @@ public class RateScheduler : IDisposable
 }
 
 /// <summary>
-/// Scheduler statistics for monitoring
+/// Internal class for tracking scheduled methods
 /// </summary>
-public class SchedulerStatistics
+internal class ScheduledMethodInfo
 {
-    public long GlobalTickNumber { get; set; }
-    public int ModuleCount { get; set; }
-    public List<ModuleTickStats> ModuleStats { get; set; } = new();
-}
-
-public class ModuleTickStats
-{
-    public string ModuleName { get; set; } = string.Empty;
+    public int Id { get; set; }
+    public Action<long, long> Method { get; set; } = null!;
+    public string Name { get; set; } = string.Empty;
     public double RequestedRateHz { get; set; }
     public double ActualRateHz { get; set; }
-    public long TickCount { get; set; }
+    public int TickDivisor { get; set; }
+    public bool IsPaused { get; set; }
+
+    // Statistics
+    public long CallCount { get; set; }
     public double TotalExecutionMs { get; set; }
-    public double AverageExecutionUs { get; set; }
     public long MaxExecutionUs { get; set; }
-    public long SkippedTicks { get; set; }
+}
+
+/// <summary>
+/// Handle to a scheduled method
+/// </summary>
+internal class ScheduledMethodHandle : IScheduledMethod
+{
+    private readonly RateScheduler _scheduler;
+    internal readonly ScheduledMethodInfo MethodInfo;
+
+    public ScheduledMethodHandle(RateScheduler scheduler, ScheduledMethodInfo methodInfo)
+    {
+        _scheduler = scheduler;
+        MethodInfo = methodInfo;
+    }
+
+    public string Name => MethodInfo.Name;
+    public double RequestedRateHz => MethodInfo.RequestedRateHz;
+    public double ActualRateHz => MethodInfo.ActualRateHz;
+    public long CallCount => MethodInfo.CallCount;
+    public double AverageExecutionUs => MethodInfo.CallCount > 0 ? (MethodInfo.TotalExecutionMs * 1000.0 / MethodInfo.CallCount) : 0;
+    public long MaxExecutionUs => MethodInfo.MaxExecutionUs;
+    public bool IsPaused => MethodInfo.IsPaused;
+
+    public void Pause() => MethodInfo.IsPaused = true;
+    public void Resume() => MethodInfo.IsPaused = false;
+
+    public void Dispose()
+    {
+        _scheduler.Unschedule(this);
+    }
 }

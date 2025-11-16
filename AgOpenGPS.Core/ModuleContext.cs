@@ -12,6 +12,7 @@ public class ModuleContext : IModuleContext
     public ILogger Logger { get; }
     public ITimeProvider TimeProvider { get; }
     public CancellationToken AppShutdownToken { get; }
+    public IScheduler? Scheduler { get; }
 
     public ModuleContext(
         IMessageBus messageBus,
@@ -19,7 +20,8 @@ public class ModuleContext : IModuleContext
         IConfiguration configuration,
         ILogger logger,
         ITimeProvider timeProvider,
-        CancellationToken appShutdownToken)
+        CancellationToken appShutdownToken,
+        IScheduler? scheduler = null)
     {
         MessageBus = messageBus;
         Services = services;
@@ -27,6 +29,7 @@ public class ModuleContext : IModuleContext
         Logger = logger;
         TimeProvider = timeProvider;
         AppShutdownToken = appShutdownToken;
+        Scheduler = scheduler;
     }
 
     public IMessageQueue CreateMessageQueue()

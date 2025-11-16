@@ -34,15 +34,8 @@ public class ApplicationCore : IDisposable
         _logger = logger;
         _messageBus = messageBus;
         _timeProvider = timeProvider;
-        _moduleManager = new ModuleManager(
-            _services,
-            _configuration,
-            _services.GetRequiredService<ILogger<ModuleManager>>(),
-            _messageBus,
-            _timeProvider
-        );
 
-        // Check if scheduler is enabled
+        // Check if scheduler is enabled and create it first
         _useScheduler = _configuration.GetValue<bool>("Core:UseScheduler", true);
 
         if (_useScheduler)
@@ -59,6 +52,16 @@ public class ApplicationCore : IDisposable
         {
             _logger.LogInformation("Rate scheduler disabled - modules will use free-running execution");
         }
+
+        // Create module manager with optional scheduler
+        _moduleManager = new ModuleManager(
+            _services,
+            _configuration,
+            _services.GetRequiredService<ILogger<ModuleManager>>(),
+            _messageBus,
+            _timeProvider,
+            _scheduler
+        );
     }
 
     /// <summary>
