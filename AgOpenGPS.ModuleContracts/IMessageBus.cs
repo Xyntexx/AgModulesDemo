@@ -7,7 +7,8 @@ namespace AgOpenGPS.ModuleContracts;
 public interface IMessageBus
 {
     /// <summary>
-    /// Subscribe to messages of type T
+    /// Subscribe to messages of type T (immediate/synchronous execution)
+    /// Handler runs on publisher's thread - use for fast, stateless operations
     /// Returns IDisposable to unsubscribe
     /// </summary>
     IDisposable Subscribe<T>(Action<T> handler) where T : struct;
@@ -17,6 +18,13 @@ public interface IMessageBus
     /// Use for time-critical handlers
     /// </summary>
     IDisposable Subscribe<T>(Action<T> handler, int priority) where T : struct;
+
+    /// <summary>
+    /// Subscribe to messages with deferred/queued execution
+    /// Messages are queued and processed during module's Tick() call
+    /// Use for stateful operations that should run in module's thread context
+    /// </summary>
+    IDisposable SubscribeQueued<T>(Action<T> handler, IMessageQueue queue) where T : struct;
 
     /// <summary>
     /// Publish message to all subscribers synchronously
@@ -34,4 +42,32 @@ public interface IMessageBus
     /// Returns true if a message was previously published, false otherwise
     /// </summary>
     bool TryGetLastMessage<T>(out T message, out DateTimeOffset timestamp) where T : struct;
+}
+
+/// <summary>
+/// Message queue for deferred message processing
+/// Tickable modules should create one and process it during Tick()
+/// </summary>
+public interface IMessageQueue
+{
+    /// <summary>
+    /// Enqueue a message for later processing
+    /// </summary>
+    void Enqueue<T>(in T message) where T : struct;
+
+    /// <summary>
+    /// Process all queued messages by calling their handlers
+    /// Call this during your module's Tick() method
+    /// </summary>
+    void ProcessQueue();
+
+    /// <summary>
+    /// Get number of messages waiting in queue
+    /// </summary>
+    int QueuedCount { get; }
+
+    /// <summary>
+    /// Clear all queued messages without processing
+    /// </summary>
+    void Clear();
 }

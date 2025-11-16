@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 public class MessageBus : IMessageBus, IDisposable
 {
     private readonly ConcurrentDictionary<Type, List<SubscriberInfo>> _subscribers = new();
+    private readonly ConcurrentDictionary<Type, List<QueuedSubscriberInfo>> _queuedSubscribers = new();
     private readonly ConcurrentDictionary<string, List<IDisposable>> _scopedSubscriptions = new();
     private readonly ConcurrentDictionary<Type, LastMessageInfo> _lastMessages = new();
     private readonly ConcurrentDictionary<Type, FailureTracker> _failureTrackers = new();
@@ -73,6 +74,36 @@ public class MessageBus : IMessageBus, IDisposable
     }
 
     /// <summary>
+    /// Subscribe with queued/deferred execution
+    /// </summary>
+    public IDisposable SubscribeQueued<T>(Action<T> handler, IMessageQueue queue) where T : struct
+    {
+        ThrowIfDisposed();
+
+        _lock.EnterWriteLock();
+        try
+        {
+            var messageType = typeof(T);
+            var queuedSubscribers = _queuedSubscribers.GetOrAdd(messageType, _ => new List<QueuedSubscriberInfo>());
+
+            var info = new QueuedSubscriberInfo
+            {
+                Handler = handler,
+                Queue = queue as MessageQueue,
+                SubscriptionId = Guid.NewGuid().ToString()
+            };
+
+            queuedSubscribers.Add(info);
+
+            return new Unsubscriber(() => UnsubscribeQueued<T>(handler));
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+    }
+
+    /// <summary>
     /// Subscribe with a scope identifier for bulk cleanup
     /// </summary>
     public IDisposable Subscribe<T>(Action<T> handler, string scope, int priority = 0) where T : struct
@@ -117,6 +148,7 @@ public class MessageBus : IMessageBus, IDisposable
         // Store last message with timestamp and enforce limits
         StoreLastMessage(messageType, message);
 
+        // 1. Process immediate subscribers
         _lock.EnterReadLock();
         List<SubscriberInfo>? subscribersCopy = null;
         try
@@ -135,7 +167,7 @@ public class MessageBus : IMessageBus, IDisposable
             _lock.ExitReadLock();
         }
 
-        // Execute handlers outside of lock to prevent deadlocks
+        // Execute immediate handlers outside of lock to prevent deadlocks
         if (subscribersCopy != null)
         {
             var failedHandlers = new List<string>();
@@ -176,6 +208,40 @@ public class MessageBus : IMessageBus, IDisposable
                 RemoveFailedHandlers<T>(failedHandlers);
             }
         }
+
+        // 2. Queue message for queued subscribers
+        _lock.EnterReadLock();
+        List<QueuedSubscriberInfo>? queuedCopy = null;
+        try
+        {
+            if (_queuedSubscribers.TryGetValue(messageType, out var queuedSubs))
+            {
+                lock (queuedSubs)
+                {
+                    queuedCopy = new List<QueuedSubscriberInfo>(queuedSubs);
+                }
+            }
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
+
+        if (queuedCopy != null)
+        {
+            foreach (var sub in queuedCopy)
+            {
+                try
+                {
+                    // Enqueue message with handler for later processing
+                    sub.Queue?.EnqueueWithHandler(message, (Action<T>)sub.Handler);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error enqueueing message for {MessageType}", messageType.Name);
+                }
+            }
+        }
     }
 
     public async Task PublishAsync<T>(T message) where T : struct
@@ -190,6 +256,23 @@ public class MessageBus : IMessageBus, IDisposable
         {
             var messageType = typeof(T);
             if (_subscribers.TryGetValue(messageType, out var subscribers))
+            {
+                subscribers.RemoveAll(s => ReferenceEquals(s.Handler, handler));
+            }
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+    }
+
+    private void UnsubscribeQueued<T>(Action<T> handler) where T : struct
+    {
+        _lock.EnterWriteLock();
+        try
+        {
+            var messageType = typeof(T);
+            if (_queuedSubscribers.TryGetValue(messageType, out var subscribers))
             {
                 subscribers.RemoveAll(s => ReferenceEquals(s.Handler, handler));
             }
@@ -258,6 +341,13 @@ public class MessageBus : IMessageBus, IDisposable
     {
         public Delegate Handler { get; set; } = null!;
         public int Priority { get; set; }
+        public string SubscriptionId { get; set; } = null!;
+    }
+
+    private class QueuedSubscriberInfo
+    {
+        public Delegate Handler { get; set; } = null!;
+        public MessageQueue? Queue { get; set; }
         public string SubscriptionId { get; set; } = null!;
     }
 

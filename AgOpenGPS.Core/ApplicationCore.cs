@@ -17,8 +17,10 @@ public class ApplicationCore : IDisposable
     private readonly MessageBus _messageBus;
     private readonly ITimeProvider _timeProvider;
     private readonly ModuleManager _moduleManager;
+    private readonly RateScheduler? _scheduler;
     private readonly CancellationTokenSource _shutdownCts = new();
     private volatile bool _disposed;
+    private readonly bool _useScheduler;
 
     public ApplicationCore(
         IServiceProvider services,
@@ -39,6 +41,24 @@ public class ApplicationCore : IDisposable
             _messageBus,
             _timeProvider
         );
+
+        // Check if scheduler is enabled
+        _useScheduler = _configuration.GetValue<bool>("Core:UseScheduler", true);
+
+        if (_useScheduler)
+        {
+            var baseTickRateHz = _configuration.GetValue<double>("Core:SchedulerBaseRateHz", 100.0);
+            _scheduler = new RateScheduler(
+                baseTickRateHz,
+                _timeProvider,
+                _services.GetRequiredService<ILogger<RateScheduler>>());
+
+            _logger.LogInformation("Rate scheduler enabled with base rate {BaseRate}Hz", baseTickRateHz);
+        }
+        else
+        {
+            _logger.LogInformation("Rate scheduler disabled - modules will use free-running execution");
+        }
     }
 
     /// <summary>
@@ -70,21 +90,48 @@ public class ApplicationCore : IDisposable
                     _logger.LogError($"Missing dependencies: {string.Join(", ", result.MissingDependencies)}");
                 }
             }
+            else if (_scheduler != null && module is ITickableModule tickable)
+            {
+                // Register tickable modules with scheduler
+                _scheduler.RegisterModule(tickable);
+            }
         }
 
-        // 4. Publish application started event
+        // 4. Start scheduler if enabled
+        if (_scheduler != null)
+        {
+            _scheduler.Start();
+            _logger.LogInformation("Rate scheduler started");
+        }
+
+        // 5. Publish application started event
         _messageBus.Publish(new ApplicationStartedEvent
         {
             Timestamp = TimestampMetadata.Create(_timeProvider, 0, null)
         });
 
         var loadedCount = _moduleManager.GetLoadedModules().Count;
-        _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} modules");
+        if (_scheduler != null)
+        {
+            var stats = _scheduler.GetStatistics();
+            _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} modules ({stats.ModuleCount} scheduled)");
+        }
+        else
+        {
+            _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} modules");
+        }
     }
 
     public async Task StopAsync()
     {
         _logger.LogInformation("AgOpenGPS Core stopping...");
+
+        // Stop scheduler first
+        if (_scheduler != null)
+        {
+            _scheduler.Stop();
+            _logger.LogInformation("Rate scheduler stopped");
+        }
 
         // Signal shutdown
         _shutdownCts.Cancel();
@@ -148,11 +195,20 @@ public class ApplicationCore : IDisposable
         return _moduleManager.GetModuleMemoryInfo(moduleId);
     }
 
+    /// <summary>
+    /// Get scheduler statistics (if scheduler is enabled)
+    /// </summary>
+    public SchedulerStatistics? GetSchedulerStatistics()
+    {
+        return _scheduler?.GetStatistics();
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
 
         _disposed = true;
+        _scheduler?.Dispose();
         _moduleManager.Dispose();
         _messageBus.Dispose();
         _shutdownCts.Dispose();

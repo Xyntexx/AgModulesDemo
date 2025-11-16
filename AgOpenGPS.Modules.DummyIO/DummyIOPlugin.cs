@@ -10,18 +10,18 @@ using System.Globalization;
 /// Dummy IO plugin with simple vehicle simulation
 /// Simulates a vehicle that responds to steer commands and generates GPS data
 /// </summary>
-public class DummyIOPlugin : IAgModule
+public class DummyIOPlugin : ITickableModule
 {
     public string Name => "Dummy IO Simulator";
     public Version Version => new Version(1, 0, 0);
     public ModuleCategory Category => ModuleCategory.IO;
     public string[] Dependencies => Array.Empty<string>();
+    public double TickRateHz => 10.0;  // 10Hz GPS update rate
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
     private ITimeProvider? _timeProvider;
     private CancellationToken _shutdownToken;
-    private Task? _simulationTask;
 
     // Vehicle state
     private double _latitude = 40.7128;   // Starting at NYC coordinates
@@ -53,8 +53,7 @@ public class DummyIOPlugin : IAgModule
 
     public Task StartAsync()
     {
-        _logger?.LogInformation("Starting vehicle simulation...");
-        _simulationTask = Task.Run(SimulationLoop);
+        _logger?.LogInformation("Vehicle simulation ready (scheduled at {Rate}Hz)", TickRateHz);
         return Task.CompletedTask;
     }
 
@@ -68,30 +67,16 @@ public class DummyIOPlugin : IAgModule
     public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     /// <summary>
-    /// Main simulation loop - updates vehicle state and publishes GPS data
+    /// Tick method called by scheduler at 10Hz
+    /// Updates vehicle state and publishes GPS data
     /// </summary>
-    private async Task SimulationLoop()
+    public void Tick(long tickNumber, long monotonicMs)
     {
-        var updateInterval = TimeSpan.FromSeconds(DeltaTime);
+        // Update vehicle physics
+        UpdateVehicleState();
 
-        while (!_shutdownToken.IsCancellationRequested)
-        {
-            // Update vehicle physics
-            UpdateVehicleState();
-
-            // Generate and publish GPS sentence
-            PublishGPSData();
-
-            // Use time provider for delays (supports simulation/fast-forward)
-            if (_timeProvider != null)
-            {
-                await _timeProvider.Delay(updateInterval, _shutdownToken);
-            }
-            else
-            {
-                await Task.Delay(updateInterval, _shutdownToken);
-            }
-        }
+        // Generate and publish GPS sentence
+        PublishGPSData();
     }
 
     /// <summary>
@@ -178,10 +163,10 @@ public class DummyIOPlugin : IAgModule
         };
         _messageBus.Publish(in rmcMessage);
 
-        // Log every 1 second (every 10th message at 10Hz)
-        if ((_timeProvider.UnixTimeMilliseconds / 100) % 10 == 0)
+        // Log every 1 second (timing is now deterministic via scheduler)
+        if ((_timeProvider?.UnixTimeMilliseconds / 1000) % 1 == 0)
         {
-            _logger?.LogInformation($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Speed={_speed:F2}m/s, SteerAngle={_steerAngle:F2}°");
+            _logger?.LogDebug($"Vehicle: Lat={_latitude:F6}, Lon={_longitude:F6}, Heading={_heading:F1}°, Speed={_speed:F2}m/s, SteerAngle={_steerAngle:F2}°");
         }
     }
 

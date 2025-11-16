@@ -28,4 +28,9 @@ public class ModuleContext : IModuleContext
         TimeProvider = timeProvider;
         AppShutdownToken = appShutdownToken;
     }
+
+    public IMessageQueue CreateMessageQueue()
+    {
+        return new MessageQueue();
+    }
 }

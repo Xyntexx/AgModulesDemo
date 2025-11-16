@@ -552,6 +552,11 @@ internal class ScopedModuleContext : IModuleContext
     public ILogger Logger { get; }
     public ITimeProvider TimeProvider { get; }
     public CancellationToken AppShutdownToken { get; }
+
+    public IMessageQueue CreateMessageQueue()
+    {
+        return new MessageQueue();
+    }
 }
 
 /// <summary>
@@ -576,6 +581,11 @@ internal class ScopedMessageBus : IMessageBus
     public IDisposable Subscribe<T>(Action<T> handler, int priority) where T : struct
     {
         return _innerBus.Subscribe(handler, _scope, priority);
+    }
+
+    public IDisposable SubscribeQueued<T>(Action<T> handler, IMessageQueue queue) where T : struct
+    {
+        return _innerBus.SubscribeQueued(handler, queue);
     }
 
     public void Publish<T>(in T message) where T : struct

@@ -25,4 +25,10 @@ public interface IModuleContext
 
     /// <summary>Cancellation token signaling application shutdown</summary>
     CancellationToken AppShutdownToken { get; }
+
+    /// <summary>
+    /// Create a new message queue for deferred message processing.
+    /// Tickable modules should call this during initialization and process the queue in Tick().
+    /// </summary>
+    IMessageQueue CreateMessageQueue();
 }
