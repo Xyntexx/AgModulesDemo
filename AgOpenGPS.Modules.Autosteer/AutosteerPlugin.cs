@@ -17,6 +17,7 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
+    private ITimeProvider? _timeProvider;
     private double _currentHeading;
     private double _targetHeading;
     private bool _engaged;
@@ -32,6 +33,7 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
     {
         _messageBus = context.MessageBus;
         _logger = context.Logger;
+        _timeProvider = context.TimeProvider;
 
         // Subscribe to GPS position
         _messageBus.Subscribe<GpsPositionMessage>(OnGpsPosition);
@@ -123,7 +125,7 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
                     SteerAngleDegrees = 0,
                     SpeedPWM = 0,
                     IsEngaged = false,
-                    TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    Timestamp = TimestampMetadata.CreateSimClockOnly(_timeProvider, 0)
                 };
                 _messageBus.Publish(in cmd);
             }
@@ -163,7 +165,7 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
             SteerAngleDegrees = steerAngle,
             SpeedPWM = 200, // Full speed
             IsEngaged = _engaged,
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            Timestamp = TimestampMetadata.CreateSimClockOnly(_timeProvider, 0)
         };
 
         _messageBus.Publish(in cmd);

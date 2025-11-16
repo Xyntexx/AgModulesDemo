@@ -75,7 +75,7 @@ public class ApplicationCore : IDisposable
         // 4. Publish application started event
         _messageBus.Publish(new ApplicationStartedEvent
         {
-            TimestampMs = _timeProvider.UnixTimeMilliseconds
+            Timestamp = TimestampMetadata.Create(_timeProvider, 0, null)
         });
 
         var loadedCount = _moduleManager.GetLoadedModules().Count;
@@ -91,7 +91,7 @@ public class ApplicationCore : IDisposable
 
         _messageBus.Publish(new ApplicationStoppingEvent
         {
-            TimestampMs = _timeProvider.UnixTimeMilliseconds
+            Timestamp = TimestampMetadata.Create(_timeProvider, 0, null)
         });
 
         // Shutdown all modules via ModuleManager

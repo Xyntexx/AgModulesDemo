@@ -93,6 +93,9 @@ ehthumbs.db
 *.ReSharper
 *.DotSettings.user
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Keep important files
 !PluginContracts/**/*.dll
 !ExamplePlugin1/**/*.dll

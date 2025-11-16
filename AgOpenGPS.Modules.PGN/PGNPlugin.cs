@@ -86,7 +86,7 @@ public class PGNPlugin : IAgModule
                         Speed = speedMs,
                         Heading = heading,
                         FixQuality = GpsFixQuality.RTK_Fixed, // Assume good fix if RMC is valid
-                        TimestampMs = raw.TimestampMs
+                        Timestamp = raw.Timestamp
                     };
 
                     _messageBus.Publish(in gpsMsg);

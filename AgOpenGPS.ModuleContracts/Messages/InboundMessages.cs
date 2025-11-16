@@ -5,7 +5,13 @@ public struct RawDataReceivedMessage
 {
     public byte[] Data;
     public IOChannel Channel;
-    public long TimestampMs;
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp;
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>GPS position data (parsed from PGN)</summary>
@@ -18,7 +24,13 @@ public struct GpsPositionMessage
     public double Speed;
     public GpsFixQuality FixQuality;
     public int SatelliteCount;
-    public long TimestampMs;
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp;
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>IMU orientation data</summary>
@@ -27,7 +39,13 @@ public struct IMUDataMessage
     public double Roll;
     public double Pitch;
     public double Yaw;
-    public long TimestampMs;
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp;
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Hardware status acknowledgment</summary>
@@ -36,7 +54,13 @@ public struct HardwareStatusMessage
     public bool AutosteerEngaged;
     public bool SectionsEnabled;
     public byte ErrorFlags;
-    public long TimestampMs;
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp;
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>IO channel types</summary>

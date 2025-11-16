@@ -182,7 +182,7 @@ public class ModuleManager : IDisposable
                     ModuleId = moduleId,
                     ModuleName = module.Name,
                     Version = module.Version.ToString(),
-                    TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    Timestamp = TimestampMetadata.Create(_timeProvider, 0, null)
                 });
 
                 return ModuleLoadResult.CreateSuccess(moduleId);
@@ -283,7 +283,7 @@ public class ModuleManager : IDisposable
                 {
                     ModuleId = moduleId,
                     ModuleName = registration.Module.Name,
-                    TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    Timestamp = TimestampMetadata.Create(_timeProvider, 0, null)
                 });
 
                 return ModuleUnloadResult.CreateSuccess(moduleId);

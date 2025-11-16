@@ -8,7 +8,17 @@ public struct ModuleLoadedEvent
     public string ModuleId { get; set; }
     public string ModuleName { get; set; }
     public string Version { get; set; }
-    public long TimestampMs { get; set; }
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp { get; set; }
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs
+    {
+        get => Timestamp.SimClockMs;
+        set => Timestamp = TimestampMetadata.CreateExplicit(value, value, string.Empty, -1, -1.0, 0);
+    }
 }
 
 /// <summary>
@@ -18,7 +28,17 @@ public struct ModuleUnloadedEvent
 {
     public string ModuleId { get; set; }
     public string ModuleName { get; set; }
-    public long TimestampMs { get; set; }
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp { get; set; }
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs
+    {
+        get => Timestamp.SimClockMs;
+        set => Timestamp = TimestampMetadata.CreateExplicit(value, value, string.Empty, -1, -1.0, 0);
+    }
 }
 
 /// <summary>
@@ -28,5 +48,15 @@ public struct ModuleReloadedEvent
 {
     public string ModuleId { get; set; }
     public string ModuleName { get; set; }
-    public long TimestampMs { get; set; }
+
+    /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
+    public TimestampMetadata Timestamp { get; set; }
+
+    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs instead")]
+    [Obsolete("Use Timestamp.SimClockMs instead")]
+    public long TimestampMs
+    {
+        get => Timestamp.SimClockMs;
+        set => Timestamp = TimestampMetadata.CreateExplicit(value, value, string.Empty, -1, -1.0, 0);
+    }
 }
