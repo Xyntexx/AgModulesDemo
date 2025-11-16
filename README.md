@@ -137,6 +137,435 @@ The system is built on three foundational patterns plus dependency injection:
 
 ---
 
+## How It Works: Simple Explanation
+
+### The Big Picture
+
+Think of AgOpenGPS as a **city with a postal service**:
+
+- **Microkernel (ApplicationCore)** = City Hall - manages everything, but doesn't do the actual work
+- **Modules** = Buildings (GPS office, Steering office, UI office) - do specialized work
+- **Message Bus** = Postal service - delivers messages between buildings
+- **Messages** = Letters with specific formats (GPS coordinates, steering commands, etc.)
+
+**Key Rule:** Buildings never talk directly to each other. They only send and receive mail through the postal service.
+
+---
+
+### Step-by-Step: How a GPS Message Flows
+
+```
+1. DummyIO Module               2. Message Bus              3. Autosteer Module
+   (GPS Simulator)                 (Post Office)               (Steering Calculator)
+
+   ┌─────────────┐                ┌──────────┐                ┌─────────────┐
+   │ I have GPS  │                │ New GPS  │                │ I'm waiting │
+   │ data!       │                │ message  │                │ for GPS     │
+   │             │                │ arrived! │                │ data...     │
+   └──────┬──────┘                └────┬─────┘                └──────▲──────┘
+          │                            │                              │
+          │ Publish(GpsPositionMsg)    │                              │
+          └───────────────────────────>│                              │
+                                       │                              │
+                                       │ Notify all subscribers       │
+                                       └─────────────────────────────>│
+                                                                      │
+                                       ┌──────────────────────────────┘
+                                       │ Calculate steering angle
+                                       │ based on GPS position
+                                       ▼
+                                   Publish(SteerCommandMsg)
+```
+
+---
+
+### Code Example: Complete Flow
+
+#### 1. Define a Message (Contract)
+
+Messages are **structs** - simple data containers everyone agrees on:
+
+```csharp
+// In ModuleContracts/Messages/InboundMessages.cs
+public struct GpsPositionMessage
+{
+    public double Latitude;      // Example: 45.5231
+    public double Longitude;     // Example: -122.6765
+    public double Heading;       // Example: 90.0 degrees
+    public double Speed;         // Example: 2.5 m/s
+    public GpsFixQuality FixQuality; // Example: RTK_Fixed
+    public long TimestampMs;     // When this happened
+}
+```
+
+**Why struct?** Zero memory allocations = faster performance. Message can be passed around without creating garbage.
+
+#### 2. Module A: Publish Message (Producer)
+
+DummyIO module simulates GPS and publishes position:
+
+```csharp
+public class DummyIOModule : IAgModule
+{
+    private IMessageBus? _messageBus;
+
+    public Task InitializeAsync(IModuleContext context)
+    {
+        // Get message bus from context (dependency injection)
+        _messageBus = context.MessageBus;
+        return Task.CompletedTask;
+    }
+
+    public Task StartAsync()
+    {
+        // Start simulation loop
+        Task.Run(SimulationLoop);
+        return Task.CompletedTask;
+    }
+
+    private async Task SimulationLoop()
+    {
+        while (true)
+        {
+            // Create GPS message
+            var gpsMessage = new GpsPositionMessage
+            {
+                Latitude = 45.5231,
+                Longitude = -122.6765,
+                Heading = 90.0,
+                Speed = 2.5,
+                FixQuality = GpsFixQuality.RTK_Fixed,
+                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            };
+
+            // Publish to message bus
+            // Note: 'in' keyword = pass by reference, no copying
+            _messageBus?.Publish(in gpsMessage);
+
+            await Task.Delay(100); // 10Hz update rate
+        }
+    }
+}
+```
+
+**What happens:**
+1. DummyIO creates a GPS message every 100ms (10 times per second)
+2. Calls `Publish()` - message goes into the postal system
+3. DummyIO doesn't know or care who receives it
+4. Message bus handles delivery to all subscribers
+
+#### 3. Module B: Subscribe to Message (Consumer)
+
+Autosteer module listens for GPS and calculates steering:
+
+```csharp
+public class AutosteerModule : IAgModule
+{
+    private IMessageBus? _messageBus;
+    private ILogger? _logger;
+    private double _targetHeading = 90.0; // Drive east
+
+    public Task InitializeAsync(IModuleContext context)
+    {
+        _messageBus = context.MessageBus;
+        _logger = context.Logger;
+
+        // Subscribe to GPS messages
+        // This is like saying "deliver GPS mail to me"
+        _messageBus.Subscribe<GpsPositionMessage>(OnGpsPosition);
+
+        _logger.LogInformation("Autosteer ready, waiting for GPS...");
+        return Task.CompletedTask;
+    }
+
+    // This method is called automatically when GPS message arrives
+    private void OnGpsPosition(GpsPositionMessage msg)
+    {
+        // Calculate steering angle based on GPS
+        double headingError = _targetHeading - msg.Heading;
+        double steerAngle = CalculatePID(headingError);
+
+        _logger.LogInformation(
+            $"GPS: Heading={msg.Heading:F1}° → Steer={steerAngle:F1}°");
+
+        // Publish steering command for others
+        var steerCommand = new SteerCommandMessage
+        {
+            SteerAngleDegrees = steerAngle,
+            IsEngaged = true,
+            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+
+        _messageBus?.Publish(in steerCommand);
+    }
+
+    private double CalculatePID(double error)
+    {
+        // Simplified PID calculation
+        return error * 0.5; // Proportional only for example
+    }
+}
+```
+
+**What happens:**
+1. Autosteer registers: "I want GPS messages"
+2. Every time DummyIO publishes GPS, `OnGpsPosition()` is called automatically
+3. Autosteer calculates steering angle
+4. Publishes `SteerCommandMessage` for UI/hardware modules
+
+#### 4. Module C: Multiple Subscribers
+
+UI module also wants GPS to display on screen:
+
+```csharp
+public class UIModule : IAgModule
+{
+    public Task InitializeAsync(IModuleContext context)
+    {
+        // Same GPS message, different purpose
+        context.MessageBus.Subscribe<GpsPositionMessage>(OnGpsPosition);
+        context.MessageBus.Subscribe<SteerCommandMessage>(OnSteerCommand);
+
+        return Task.CompletedTask;
+    }
+
+    private void OnGpsPosition(GpsPositionMessage msg)
+    {
+        // Update UI display
+        UpdateLatitudeDisplay(msg.Latitude);
+        UpdateLongitudeDisplay(msg.Longitude);
+        UpdateHeadingDisplay(msg.Heading);
+    }
+
+    private void OnSteerCommand(SteerCommandMessage msg)
+    {
+        // Update steering angle gauge
+        UpdateSteeringGauge(msg.SteerAngleDegrees);
+    }
+}
+```
+
+**Key Point:**
+- DummyIO publishes GPS **once**
+- Both Autosteer AND UI receive it
+- They don't know about each other
+- Adding/removing modules doesn't affect others
+
+---
+
+### The Magic: Message Bus Implementation
+
+Here's how the message bus works internally (simplified):
+
+```csharp
+public class MessageBus
+{
+    // Dictionary: Message Type → List of handlers
+    private Dictionary<Type, List<Action<object>>> _subscribers = new();
+
+    public void Subscribe<T>(Action<T> handler) where T : struct
+    {
+        var messageType = typeof(T);
+
+        if (!_subscribers.ContainsKey(messageType))
+            _subscribers[messageType] = new List<Action<object>>();
+
+        // Store handler
+        _subscribers[messageType].Add(msg => handler((T)msg));
+    }
+
+    public void Publish<T>(in T message) where T : struct
+    {
+        var messageType = typeof(T);
+
+        // Find all subscribers for this message type
+        if (_subscribers.TryGetValue(messageType, out var handlers))
+        {
+            // Call each subscriber's handler
+            foreach (var handler in handlers)
+            {
+                try
+                {
+                    handler(message);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't crash other handlers
+                    Console.WriteLine($"Handler error: {ex.Message}");
+                }
+            }
+        }
+    }
+}
+```
+
+**Real implementation in AgOpenGPS has:**
+- Thread safety (ReaderWriterLockSlim)
+- Priority ordering (safety systems first)
+- Automatic handler removal after repeated failures
+- Scoped subscriptions (cleanup when module unloads)
+- Performance optimizations (zero allocation)
+
+---
+
+### Complete Example: Three Modules Working Together
+
+```csharp
+// Module 1: GPS Simulator
+DummyIO publishes:    GpsPositionMessage { Lat=45.5, Lon=-122.6, Heading=90° }
+                                ↓
+                          Message Bus
+                         /            \
+                        ↓              ↓
+Module 2: Autosteer receives:    Module 3: UI receives:
+- Calculates: steer = -5°        - Updates map display
+- Publishes: SteerCommandMessage - Updates heading indicator
+                ↓
+          Message Bus
+                ↓
+Module 4: Hardware receives:
+- Sends to tractor: turn left 5°
+```
+
+**In Code:**
+
+```csharp
+// This all happens automatically, no coordination needed!
+
+// DummyIO
+_messageBus.Publish(new GpsPositionMessage { Heading = 90.0, ... });
+
+// Autosteer (called automatically)
+OnGpsPosition(msg) → calculates →
+_messageBus.Publish(new SteerCommandMessage { SteerAngle = -5.0, ... });
+
+// UI (called automatically)
+OnGpsPosition(msg) → updates display
+OnSteerCommand(msg) → updates gauge
+
+// Hardware (called automatically)
+OnSteerCommand(msg) → sends to serial port
+```
+
+---
+
+### Benefits of This Design
+
+#### 1. **Loose Coupling**
+```csharp
+// Autosteer doesn't need to know about GPS module
+// It only knows about GpsPositionMessage (contract)
+
+// Before (tight coupling):
+var gps = new GPSDriver();
+var position = gps.GetPosition(); // ❌ Directly depends on GPSDriver
+
+// After (loose coupling):
+_messageBus.Subscribe<GpsPositionMessage>(OnGps); // ✅ Depends on message contract
+```
+
+#### 2. **Easy to Test**
+```csharp
+// Test autosteer without real GPS
+var mockBus = new MessageBus();
+var autosteer = new AutosteerModule();
+autosteer.Initialize(new ModuleContext { MessageBus = mockBus });
+
+// Simulate GPS
+mockBus.Publish(new GpsPositionMessage { Heading = 95.0, ... });
+
+// Assert autosteer calculated correct angle
+Assert.Equal(-2.5, capturedSteerCommand.SteerAngleDegrees);
+```
+
+#### 3. **No Load Order Dependencies**
+```csharp
+// Doesn't matter which loads first!
+// Autosteer can subscribe before DummyIO starts publishing
+// Messages will flow once both are running
+
+await core.LoadModuleAsync(new AutosteerModule()); // Subscribes
+await core.LoadModuleAsync(new DummyIOModule());   // Starts publishing
+// ✅ Works!
+
+await core.LoadModuleAsync(new DummyIOModule());   // Starts publishing
+await core.LoadModuleAsync(new AutosteerModule()); // Subscribes
+// ✅ Also works!
+```
+
+#### 4. **Easy to Add Features**
+```csharp
+// Want to log all GPS data? Just add a module:
+public class GPSLoggerModule : IAgModule
+{
+    public Task InitializeAsync(IModuleContext context)
+    {
+        context.MessageBus.Subscribe<GpsPositionMessage>(msg =>
+        {
+            File.AppendAllText("gps.log", $"{msg.Timestamp},{msg.Lat},{msg.Lon}\n");
+        });
+        return Task.CompletedTask;
+    }
+}
+
+// No changes to existing modules!
+// Just drop GPSLogger DLL into modules folder and restart
+```
+
+---
+
+### Message Types in AgOpenGPS
+
+The system has **17 message types** organized by purpose:
+
+**Inbound (Hardware → Software):**
+```csharp
+GpsPositionMessage      // GPS coordinates, heading, speed
+ImuOrientationMessage   // Roll, pitch, yaw from IMU
+WheelAngleSensorMessage // Current steering angle
+```
+
+**Outbound (Software → Hardware):**
+```csharp
+SteerCommandMessage     // Desired steering angle
+SectionControlMessage   // Turn spray sections on/off
+RelayControlMessage     // Control relays (lights, etc.)
+```
+
+**Internal (Module → Module):**
+```csharp
+GuidanceLineMessage     // AB line for autosteer
+FieldBoundaryMessage    // Field boundaries
+```
+
+**Lifecycle (System Events):**
+```csharp
+ApplicationStartedEvent
+ApplicationStoppingEvent
+ModuleLoadedEvent
+ModuleUnloadedEvent
+```
+
+---
+
+### Summary: The Core Concepts
+
+1. **Modules are independent** - They don't know about each other
+2. **Messages are contracts** - Everyone agrees on the format (struct definitions)
+3. **Message bus is the postal service** - Delivers messages from publishers to subscribers
+4. **Subscribe = "I want this type of mail"** - Register a handler function
+5. **Publish = "Send this mail to everyone who wants it"** - Fire and forget
+6. **Zero coupling** - Add/remove modules without changing others
+7. **Easy testing** - Publish fake messages, verify behavior
+
+**It's like a newspaper:**
+- Newspaper publishes stories (messages)
+- Readers subscribe to sections they care about (subscribe)
+- Readers don't know who else reads the paper (loose coupling)
+- Adding a new section doesn't affect existing readers (extensibility)
+
+---
+
 ## Example: Creating a Module
 
 ```csharp
