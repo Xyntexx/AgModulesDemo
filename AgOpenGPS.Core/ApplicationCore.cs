@@ -140,6 +140,14 @@ public class ApplicationCore : IDisposable
         return await _moduleManager.PerformHealthCheckAsync();
     }
 
+    /// <summary>
+    /// Get memory usage information for a specific module
+    /// </summary>
+    public ModuleMemoryInfo GetModuleMemoryInfo(string moduleId)
+    {
+        return _moduleManager.GetModuleMemoryInfo(moduleId);
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

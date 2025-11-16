@@ -1,5 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,6 +16,7 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private ApplicationCore? _core;
     private IMessageBus? _messageBus;
+    private Timer? _moduleRefreshTimer;
 
     [ObservableProperty]
     private string _latitude = "0.0";
@@ -41,6 +45,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _logMessages = new();
 
+    [ObservableProperty]
+    private ObservableCollection<ModuleStatusViewModel> _modules = new();
+
+    [ObservableProperty]
+    private string _moduleStatusText = "Loading...";
+
     public void Initialize(ApplicationCore core, IMessageBus messageBus)
     {
         _core = core;
@@ -53,6 +63,49 @@ public partial class MainWindowViewModel : ObservableObject
         _messageBus.Subscribe<SteerCommandMessage>(OnSteerCommand);
 
         AddLog("GUI initialized and connected to message bus");
+
+        // Initial module load
+        RefreshModules();
+
+        // Setup timer to refresh modules every 2 seconds
+        _moduleRefreshTimer = new Timer(_ => RefreshModules(), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    private void RefreshModules()
+    {
+        if (_core == null) return;
+
+        try
+        {
+            var moduleInfos = _core.GetLoadedModules();
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                Modules.Clear();
+
+                foreach (var info in moduleInfos)
+                {
+                    var memoryInfo = _core.GetModuleMemoryInfo(info.ModuleId);
+
+                    Modules.Add(new ModuleStatusViewModel
+                    {
+                        Name = info.Name,
+                        Version = $"v{info.Version}",
+                        State = info.State.ToString(),
+                        Category = info.Category.ToString(),
+                        Health = info.Health,
+                        MemoryUsage = $"{memoryInfo.EstimatedMemoryMB:F1} MB",
+                        LoadedTime = info.LoadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                    });
+                }
+
+                ModuleStatusText = $"{Modules.Count} module(s) loaded • Last updated: {DateTime.Now:HH:mm:ss}";
+            });
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Error refreshing modules: {ex.Message}");
+        }
     }
 
     private void OnGpsPosition(GpsPositionMessage msg)
@@ -130,4 +183,31 @@ public partial class MainWindowViewModel : ObservableObject
             }
         });
     }
+}
+
+public class ModuleStatusViewModel
+{
+    public string Name { get; set; } = "";
+    public string Version { get; set; } = "";
+    public string State { get; set; } = "";
+    public string Category { get; set; } = "";
+    public ModuleHealth Health { get; set; }
+    public string MemoryUsage { get; set; } = "";
+    public string LoadedTime { get; set; } = "";
+
+    public string HealthText => Health switch
+    {
+        ModuleHealth.Healthy => "HEALTHY",
+        ModuleHealth.Degraded => "DEGRADED",
+        ModuleHealth.Unhealthy => "UNHEALTHY",
+        _ => "UNKNOWN"
+    };
+
+    public ISolidColorBrush HealthColor => Health switch
+    {
+        ModuleHealth.Healthy => new SolidColorBrush(Color.Parse("#27AE60")),
+        ModuleHealth.Degraded => new SolidColorBrush(Color.Parse("#F39C12")),
+        ModuleHealth.Unhealthy => new SolidColorBrush(Color.Parse("#E74C3C")),
+        _ => new SolidColorBrush(Color.Parse("#95A5A6"))
+    };
 }

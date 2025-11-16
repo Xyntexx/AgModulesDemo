@@ -499,6 +499,14 @@ public class ModuleManager : IDisposable
         return _watchdog.GetStatistics();
     }
 
+    /// <summary>
+    /// Get memory usage information for a specific module
+    /// </summary>
+    public ModuleMemoryInfo GetModuleMemoryInfo(string moduleId)
+    {
+        return _memoryMonitor.GetModuleMemoryInfo(moduleId);
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
