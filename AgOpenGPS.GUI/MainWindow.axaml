@@ -137,61 +137,41 @@
 
       <!-- Modules Tab -->
       <TabItem Header="Modules">
-        <Border Background="#ECF0F1" CornerRadius="5" Padding="15">
+        <Border Background="#ECF0F1" CornerRadius="5" Padding="10">
           <Grid RowDefinitions="Auto,*">
 
             <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,15">
-              <TextBlock Text="Loaded Modules" FontSize="20" FontWeight="Bold" Foreground="#2C3E50" Margin="0,0,0,5"/>
-              <TextBlock Text="{Binding ModuleStatusText}" FontSize="12" Foreground="#7F8C8D"/>
+            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+              <TextBlock Text="Loaded Modules" FontSize="16" FontWeight="Bold" Foreground="#2C3E50" Margin="0,0,0,3"/>
+              <TextBlock Text="{Binding ModuleStatusText}" FontSize="10" Foreground="#7F8C8D"/>
             </StackPanel>
 
             <!-- Module List -->
-            <Border Grid.Row="1" Background="White" CornerRadius="5" Padding="10">
+            <Border Grid.Row="1" Background="White" CornerRadius="3" Padding="5">
               <ScrollViewer>
                 <ItemsControl ItemsSource="{Binding Modules}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border Background="#F8F9FA" Margin="0,0,0,10" Padding="15" CornerRadius="5" BorderBrush="#BDC3C7" BorderThickness="1">
-                        <Grid RowDefinitions="Auto,Auto,Auto">
+                      <Border Background="#F8F9FA" Margin="0,0,0,5" Padding="8" CornerRadius="3" BorderBrush="#BDC3C7" BorderThickness="1">
+                        <Grid RowDefinitions="Auto,Auto" RowSpacing="5">
 
                           <!-- Module Header -->
-                          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                              <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="#2C3E50"/>
-                              <TextBlock Text="{Binding Version}" FontSize="12" Foreground="#7F8C8D" VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <Border Grid.Column="1" Background="{Binding HealthColor}" Padding="8,4" CornerRadius="3">
-                              <TextBlock Text="{Binding HealthText}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Bold" Foreground="#2C3E50" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Version}" FontSize="10" Foreground="#7F8C8D" VerticalAlignment="Center" Margin="8,0,8,0"/>
+                            <Border Grid.Column="2" Background="{Binding HealthColor}" Padding="5,2" CornerRadius="2" Margin="0,0,5,0">
+                              <TextBlock Text="{Binding HealthText}" FontSize="9" FontWeight="Bold" Foreground="White"/>
                             </Border>
-                          </Grid>
-
-                          <!-- Module Stats -->
-                          <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="10" Margin="0,0,0,10">
-                            <Border Background="White" Padding="8" CornerRadius="3" BorderBrush="#E0E0E0" BorderThickness="1">
-                              <StackPanel>
-                                <TextBlock Text="Memory" FontSize="10" Foreground="#7F8C8D" Margin="0,0,0,2"/>
-                                <TextBlock Text="{Binding MemoryUsage}" FontSize="14" FontWeight="Bold" Foreground="#2C3E50"/>
-                              </StackPanel>
-                            </Border>
-                            <Border Grid.Column="1" Background="White" Padding="8" CornerRadius="3" BorderBrush="#E0E0E0" BorderThickness="1">
-                              <StackPanel>
-                                <TextBlock Text="State" FontSize="10" Foreground="#7F8C8D" Margin="0,0,0,2"/>
-                                <TextBlock Text="{Binding State}" FontSize="14" FontWeight="Bold" Foreground="#2C3E50"/>
-                              </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" Background="White" Padding="8" CornerRadius="3" BorderBrush="#E0E0E0" BorderThickness="1">
-                              <StackPanel>
-                                <TextBlock Text="Category" FontSize="10" Foreground="#7F8C8D" Margin="0,0,0,2"/>
-                                <TextBlock Text="{Binding Category}" FontSize="14" FontWeight="Bold" Foreground="#2C3E50"/>
-                              </StackPanel>
-                            </Border>
+                            <TextBlock Grid.Column="3" Text="{Binding MemoryUsage}" FontSize="11" FontWeight="SemiBold" Foreground="#2C3E50" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Grid.Column="4" Text="{Binding State}" FontSize="10" Foreground="#7F8C8D" VerticalAlignment="Center"/>
                           </Grid>
 
                           <!-- Module Details -->
-                          <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="5">
-                            <TextBlock Grid.Column="0" Text="Loaded:" FontSize="11" Foreground="#7F8C8D"/>
-                            <TextBlock Grid.Column="1" Text="{Binding LoadedTime}" FontSize="11" Foreground="#95A5A6"/>
+                          <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*">
+                            <TextBlock Grid.Column="0" Text="Category:" FontSize="9" Foreground="#95A5A6" Margin="0,0,4,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Category}" FontSize="9" Foreground="#7F8C8D" Margin="0,0,12,0"/>
+                            <TextBlock Grid.Column="2" Text="Loaded:" FontSize="9" Foreground="#95A5A6" Margin="0,0,4,0"/>
+                            <TextBlock Grid.Column="3" Text="{Binding LoadedTime}" FontSize="9" Foreground="#7F8C8D"/>
                           </Grid>
 
                         </Grid>
