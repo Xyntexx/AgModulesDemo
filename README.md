@@ -14,7 +14,7 @@ A **minimal, extensible core** for AgOpenGPS that demonstrates how a microkernel
 - 📊 **Production Monitoring** - Memory limits (500MB/module), hang detection (60s), health checks
 - 🧪 **Testability** - Time abstraction enables instant tests and fast-forward simulations (1 hour in 1 second)
 
-**Architecture:** Microkernel + Publish-Subscribe + 20+ Design Patterns ([see docs](./docs/ARCHITECTURE.md))
+**Architecture:** Microkernel + Publish-Subscribe + Plugin + Dependency Injection ([see docs](./docs/ARCHITECTURE.md))
 
 ---
 
@@ -122,15 +122,16 @@ await timeProvider.Delay(TimeSpan.FromHours(24));
 
 ---
 
-## Design Patterns Used
+## Core Architectural Patterns
 
-The architecture demonstrates proven enterprise patterns:
+The system is built on three foundational patterns plus dependency injection:
 
-**Creational:** Dependency Injection, Factory (reflective module discovery), Singleton, Strategy (time providers)
-**Structural:** Adapter (scoped subscriptions), Facade (ApplicationCore), Decorator (timeout/exception handling), Proxy (scoped context)
-**Behavioral:** Observer (pub/sub), State Machine (module lifecycle), Command (deferred execution), Template Method, Chain of Responsibility
-**Concurrency:** Thread Pool (per-module), Producer-Consumer, Reader-Writer Lock, Semaphore
-**Resilience:** Circuit Breaker, Timeout, Watchdog, Memory Monitoring, Health Check
+1. **Microkernel Architecture** - Small stable core (~2k LOC), all features in dynamically-loaded modules
+2. **Publish-Subscribe (Observer)** - Type-safe message bus, modules never call each other directly
+3. **Dependency Injection** - Core services managed via Microsoft.Extensions.DependencyInjection
+4. **Plugin Architecture** - Reflective module discovery, zero-configuration loading from `./modules/` directory
+
+**Plus 15+ supporting patterns** for resilience, concurrency, and lifecycle management.
 
 [Full pattern documentation →](./docs/ARCHITECTURE.md)
 
