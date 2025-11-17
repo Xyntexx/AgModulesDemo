@@ -8,13 +8,12 @@ using System.Diagnostics;
 /// Deterministic rate-based scheduler for modules.
 /// Guarantees fixed-rate execution with drift compensation and deterministic ordering.
 /// Provides the tick-based execution model required by SRS R-22-001.
-/// Supports both ITickableModule and standalone scheduled methods.
+/// Supports scheduling multiple methods at different rates.
 /// </summary>
 public class RateScheduler : IScheduler, IDisposable
 {
     private readonly ITimeProvider _timeProvider;
     private readonly ILogger<RateScheduler> _logger;
-    private readonly List<ScheduledModule> _scheduledModules = new();
     private readonly List<ScheduledMethodInfo> _scheduledMethods = new();
     private readonly Thread? _schedulerThread;
     private readonly CancellationTokenSource _cts = new();
@@ -53,35 +52,6 @@ public class RateScheduler : IScheduler, IDisposable
         };
     }
 
-    /// <summary>
-    /// Register a module for scheduled execution
-    /// </summary>
-    public void RegisterModule(ITickableModule module)
-    {
-        lock (_lock)
-        {
-            if (IsRunning)
-                throw new InvalidOperationException("Cannot register modules while scheduler is running");
-
-            // Calculate tick divisor (how often to skip ticks)
-            var divisor = CalculateTickDivisor(module.TickRateHz);
-
-            var scheduled = new ScheduledModule
-            {
-                Module = module,
-                RequestedRateHz = module.TickRateHz,
-                ActualRateHz = BaseTickRateHz / divisor,
-                TickDivisor = divisor,
-                Category = module.Category
-            };
-
-            _scheduledModules.Add(scheduled);
-
-            _logger.LogInformation(
-                "Registered {ModuleName} for scheduled execution: Requested={RequestedHz}Hz, Actual={ActualHz}Hz, Divisor={Divisor}",
-                module.Name, scheduled.RequestedRateHz, scheduled.ActualRateHz, scheduled.TickDivisor);
-        }
-    }
 
     /// <summary>
     /// Schedule a standalone method for execution at a specific rate
@@ -138,21 +108,13 @@ public class RateScheduler : IScheduler, IDisposable
             if (IsRunning)
                 throw new InvalidOperationException("Scheduler is already running");
 
-            // Sort modules by category and then by rate (higher rate first for better timing)
-            _scheduledModules.Sort((a, b) =>
-            {
-                var catCompare = a.Category.CompareTo(b.Category);
-                if (catCompare != 0) return catCompare;
-                return b.ActualRateHz.CompareTo(a.ActualRateHz);
-            });
+            _logger.LogInformation("Starting rate scheduler at {BaseRate}Hz with {MethodCount} scheduled methods",
+                BaseTickRateHz, _scheduledMethods.Count);
 
-            _logger.LogInformation("Starting rate scheduler at {BaseRate}Hz with {ModuleCount} modules",
-                BaseTickRateHz, _scheduledModules.Count);
-
-            foreach (var mod in _scheduledModules)
+            foreach (var method in _scheduledMethods)
             {
-                _logger.LogInformation("  [{Category}] {Name} @ {Rate}Hz",
-                    mod.Category, mod.Module.Name, mod.ActualRateHz);
+                _logger.LogInformation("  {Name} @ {Rate}Hz",
+                    method.Name, method.ActualRateHz);
             }
 
             IsRunning = true;
@@ -188,19 +150,9 @@ public class RateScheduler : IScheduler, IDisposable
             return new SchedulerStatistics
             {
                 GlobalTickNumber = _globalTickNumber,
-                ModuleCount = _scheduledModules.Count,
+                ModuleCount = 0,  // Deprecated - modules now use scheduled methods
                 ScheduledMethodCount = _scheduledMethods.Count,
-                ModuleStats = _scheduledModules.Select(m => new ModuleTickStats
-                {
-                    ModuleName = m.Module.Name,
-                    RequestedRateHz = m.RequestedRateHz,
-                    ActualRateHz = m.ActualRateHz,
-                    TickCount = m.TickCount,
-                    TotalExecutionMs = m.TotalExecutionMs,
-                    AverageExecutionUs = m.TickCount > 0 ? (m.TotalExecutionMs * 1000.0 / m.TickCount) : 0,
-                    MaxExecutionUs = m.MaxExecutionUs,
-                    SkippedTicks = m.SkippedTicks
-                }).ToList(),
+                ModuleStats = new List<ModuleTickStats>(),  // Deprecated
                 MethodStats = _scheduledMethods.Select(m => new ScheduledMethodStats
                 {
                     Name = m.Name,
@@ -286,49 +238,11 @@ public class RateScheduler : IScheduler, IDisposable
     }
 
     /// <summary>
-    /// Execute one tick - call all modules and methods that should run this tick
+    /// Execute one tick - call all methods that should run this tick
     /// </summary>
     private void ExecuteTick(long globalTick, long monotonicMs)
     {
-        // 1. Execute scheduled modules
-        foreach (var module in _scheduledModules)
-        {
-            // Check if this module should run this tick
-            if (globalTick % module.TickDivisor == 0)
-            {
-                var startMonotonicMs = _timeProvider.MonotonicMilliseconds;
-
-                try
-                {
-                    module.Module.Tick(globalTick, monotonicMs);
-
-                    // Track statistics
-                    var executionUs = (_timeProvider.MonotonicMilliseconds - startMonotonicMs) * 1000;
-                    module.TickCount++;
-                    module.TotalExecutionMs += executionUs / 1000.0;
-                    if (executionUs > module.MaxExecutionUs)
-                    {
-                        module.MaxExecutionUs = executionUs;
-                    }
-
-                    // Warn if module took too long
-                    if (executionUs > 1000) // > 1ms
-                    {
-                        _logger.LogWarning(
-                            "{ModuleName}.Tick() took {ExecutionUs}μs (>1ms) - consider optimizing",
-                            module.Module.Name, executionUs);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "{ModuleName}.Tick() failed at tick {TickNumber}",
-                        module.Module.Name, globalTick);
-                    module.SkippedTicks++;
-                }
-            }
-        }
-
-        // 2. Execute scheduled methods
+        // Execute scheduled methods
         foreach (var method in _scheduledMethods)
         {
             // Skip if paused
@@ -393,14 +307,14 @@ public class RateScheduler : IScheduler, IDisposable
     private void LogStatistics()
     {
         var stats = GetStatistics();
-        _logger.LogInformation("Scheduler Stats: Tick={Tick}, Modules={Count}",
-            stats.GlobalTickNumber, stats.ModuleCount);
+        _logger.LogInformation("Scheduler Stats: Tick={Tick}, Methods={Count}",
+            stats.GlobalTickNumber, stats.ScheduledMethodCount);
 
-        foreach (var mod in stats.ModuleStats)
+        foreach (var method in stats.MethodStats)
         {
-            _logger.LogDebug("  {Name}: Ticks={Count}, Avg={AvgUs}μs, Max={MaxUs}μs, Skipped={Skipped}",
-                mod.ModuleName, mod.TickCount, mod.AverageExecutionUs.ToString("F1"),
-                mod.MaxExecutionUs, mod.SkippedTicks);
+            _logger.LogDebug("  {Name}: Calls={Count}, Avg={AvgUs}μs, Max={MaxUs}μs, Paused={Paused}",
+                method.Name, method.CallCount, method.AverageExecutionUs.ToString("F1"),
+                method.MaxExecutionUs, method.IsPaused);
         }
     }
 
@@ -408,21 +322,6 @@ public class RateScheduler : IScheduler, IDisposable
     {
         Stop();
         _cts.Dispose();
-    }
-
-    private class ScheduledModule
-    {
-        public ITickableModule Module { get; set; } = null!;
-        public double RequestedRateHz { get; set; }
-        public double ActualRateHz { get; set; }
-        public int TickDivisor { get; set; }
-        public ModuleCategory Category { get; set; }
-
-        // Statistics
-        public long TickCount { get; set; }
-        public double TotalExecutionMs { get; set; }
-        public long MaxExecutionUs { get; set; }
-        public long SkippedTicks { get; set; }
     }
 }
 

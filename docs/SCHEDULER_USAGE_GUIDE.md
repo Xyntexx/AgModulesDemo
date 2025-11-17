@@ -2,29 +2,40 @@
 
 ## Overview
 
-The rate scheduler provides three ways to schedule code execution:
+The rate scheduler allows modules to schedule methods for deterministic execution at fixed rates using the `Schedule()` API. All scheduled methods maintain **deterministic execution** and **zero timing drift**.
 
-1. **ITickableModule** - Single Tick() method per module
-2. **Multiple Scheduled Methods** - Register multiple methods at different rates
-3. **Hybrid** - Combine both approaches
-
-All approaches maintain **deterministic execution** and **zero timing drift**.
-
-## Option 1: ITickableModule (Simple)
+## Option 1: Single Scheduled Method (Simple)
 
 Best for modules with a single execution rate.
 
 ```csharp
-public class SimpleModule : ITickableModule
+public class SimpleModule : IAgModule
 {
-    public double TickRateHz => 10.0;  // Execute at 10Hz
+    private IScheduledMethod? _tickHandle;
 
-    public void Tick(long tickNumber, long monotonicMs)
+    public Task InitializeAsync(IModuleContext context)
+    {
+        // Schedule single method at 10Hz
+        _tickHandle = context.Scheduler?.Schedule(
+            Tick,
+            rateHz: 10.0,
+            name: "MainTick");
+
+        return Task.CompletedTask;
+    }
+
+    private void Tick(long tickNumber, long monotonicMs)
     {
         // All module logic here
         ReadSensors();
         ProcessData();
         PublishResults();
+    }
+
+    public Task ShutdownAsync()
+    {
+        _tickHandle?.Dispose();
+        return Task.CompletedTask;
     }
 }
 ```
@@ -42,7 +53,7 @@ public class SimpleModule : ITickableModule
 Best for modules with operations at different rates.
 
 ```csharp
-public class MultiRateModule : IAgModule  // NOT ITickableModule!
+public class MultiRateModule : IAgModule
 {
     private ILogger _logger;
     private IScheduledMethod? _fastHandle;
@@ -132,67 +143,6 @@ public class MultiRateModule : IAgModule  // NOT ITickableModule!
 **Cons:**
 - More boilerplate
 - Need to manage handles
-
-## Option 3: Hybrid Approach (Best of Both)
-
-Combine Tick() with additional scheduled methods.
-
-```csharp
-public class HybridModule : ITickableModule
-{
-    public double TickRateHz => 20.0;  // Main tick at 20Hz
-
-    private IMessageQueue _queue;
-
-    public Task InitializeAsync(IModuleContext context)
-    {
-        _queue = context.CreateMessageQueue();
-
-        // Subscribe to messages (queued)
-        context.MessageBus.SubscribeQueued<GpsPositionMessage>(OnGps, _queue);
-
-        // Schedule additional low-frequency tasks
-        context.Scheduler?.Schedule(
-            PeriodicDiagnostics,
-            rateHz: 0.5,
-            name: "PeriodicDiagnostics");  // Every 2 seconds
-
-        context.Scheduler?.Schedule(
-            PeriodicSave,
-            rateHz: 0.1,
-            name: "PeriodicSave");  // Every 10 seconds
-    }
-
-    // Main tick runs at 20Hz
-    public void Tick(long tickNumber, long monotonicMs)
-    {
-        // Process queued messages
-        _queue.ProcessQueue();
-
-        // Main control loop logic
-        RunControlLoop();
-    }
-
-    // Slow periodic tasks scheduled separately
-    private void PeriodicDiagnostics(long tickNumber, long monotonicMs)
-    {
-        // Run expensive diagnostics less frequently
-    }
-
-    private void PeriodicSave(long tickNumber, long monotonicMs)
-    {
-        // Save state periodically
-    }
-}
-```
-
-**Pros:**
-- Main logic in Tick() (simple)
-- Slow operations separated (efficient)
-- Queued message processing (thread-safe)
-
-**Cons:**
-- Slightly more complex
 
 ## IScheduledMethod Handle
 
@@ -456,6 +406,8 @@ Enable/disable scheduler and set base rate in `appsettings.json`:
 ```csharp
 public class OldModule : IAgModule
 {
+    private CancellationToken _cancelled;
+
     public async Task StartAsync()
     {
         _ = Task.Run(FastLoop);
@@ -464,7 +416,7 @@ public class OldModule : IAgModule
 
     private async Task FastLoop()
     {
-        while (!_cancelled)
+        while (!_cancelled.IsCancellationRequested)
         {
             DoFastWork();
             await Task.Delay(10);  // ~100Hz, but drift!
@@ -473,7 +425,7 @@ public class OldModule : IAgModule
 
     private async Task SlowLoop()
     {
-        while (!_cancelled)
+        while (!_cancelled.IsCancellationRequested)
         {
             DoSlowWork();
             await Task.Delay(1000);  // ~1Hz, but drift!
@@ -487,15 +439,25 @@ public class OldModule : IAgModule
 ```csharp
 public class NewModule : IAgModule
 {
+    private IScheduledMethod? _fastHandle;
+    private IScheduledMethod? _slowHandle;
+
     public Task InitializeAsync(IModuleContext context)
     {
-        context.Scheduler?.Schedule(DoFastWork, 100.0);  // Exactly 100Hz, zero drift
-        context.Scheduler?.Schedule(DoSlowWork, 1.0);    // Exactly 1Hz, zero drift
+        _fastHandle = context.Scheduler?.Schedule(DoFastWork, 100.0, "FastWork");  // Exactly 100Hz, zero drift
+        _slowHandle = context.Scheduler?.Schedule(DoSlowWork, 1.0, "SlowWork");    // Exactly 1Hz, zero drift
         return Task.CompletedTask;
     }
 
     private void DoFastWork(long tick, long ms) { /* ... */ }
     private void DoSlowWork(long tick, long ms) { /* ... */ }
+
+    public Task ShutdownAsync()
+    {
+        _fastHandle?.Dispose();
+        _slowHandle?.Dispose();
+        return Task.CompletedTask;
+    }
 }
 ```
 

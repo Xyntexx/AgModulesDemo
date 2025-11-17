@@ -10,18 +10,18 @@ using System.Globalization;
 /// Dummy IO plugin with simple vehicle simulation
 /// Simulates a vehicle that responds to steer commands and generates GPS data
 /// </summary>
-public class DummyIOPlugin : ITickableModule
+public class DummyIOPlugin : IAgModule
 {
     public string Name => "Dummy IO Simulator";
     public Version Version => new Version(1, 0, 0);
     public ModuleCategory Category => ModuleCategory.IO;
     public string[] Dependencies => Array.Empty<string>();
-    public double TickRateHz => 10.0;  // 10Hz GPS update rate
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
     private ITimeProvider? _timeProvider;
     private CancellationToken _shutdownToken;
+    private IScheduledMethod? _simulationHandle;
 
     // Vehicle state
     private double _latitude = 40.7128;   // Starting at NYC coordinates
@@ -46,6 +46,12 @@ public class DummyIOPlugin : ITickableModule
         // Subscribe to outbound steer commands from PGN
         _messageBus.Subscribe<RawDataToSendMessage>(OnReceiveSteerCommand);
 
+        // Schedule simulation loop at 10Hz
+        _simulationHandle = context.Scheduler?.Schedule(
+            Tick,
+            rateHz: 10.0,
+            name: "VehicleSimulation");
+
         _logger.LogInformation("Dummy IO Simulator initialized");
         _logger.LogInformation($"Starting position: {_latitude:F6}, {_longitude:F6}");
         return Task.CompletedTask;
@@ -53,7 +59,7 @@ public class DummyIOPlugin : ITickableModule
 
     public Task StartAsync()
     {
-        _logger?.LogInformation("Vehicle simulation ready (scheduled at {Rate}Hz)", TickRateHz);
+        _logger?.LogInformation("Vehicle simulation ready (scheduled at 10Hz)");
         return Task.CompletedTask;
     }
 
@@ -63,14 +69,19 @@ public class DummyIOPlugin : ITickableModule
         return Task.CompletedTask;
     }
 
-    public Task ShutdownAsync() => Task.CompletedTask;
+    public Task ShutdownAsync()
+    {
+        _simulationHandle?.Dispose();
+        return Task.CompletedTask;
+    }
+
     public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     /// <summary>
     /// Tick method called by scheduler at 10Hz
     /// Updates vehicle state and publishes GPS data
     /// </summary>
-    public void Tick(long tickNumber, long monotonicMs)
+    private void Tick(long tickNumber, long monotonicMs)
     {
         // Update vehicle physics
         UpdateVehicleState();

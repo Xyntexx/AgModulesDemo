@@ -8,18 +8,18 @@ using Microsoft.Extensions.Logging;
 /// Autosteer control plugin
 /// Calculates steering commands based on GPS and guidance
 /// </summary>
-public class AutosteerPlugin : ITickableModule, IConfigurableModule
+public class AutosteerPlugin : IAgModule, IConfigurableModule
 {
     public string Name => "Autosteer";
     public Version Version => new Version(1, 0, 0);
     public ModuleCategory Category => ModuleCategory.Control;
     public string[] Dependencies => new[] { "PGN Translator" };
-    public double TickRateHz => 10.0;  // 10Hz control loop
 
     private IMessageBus? _messageBus;
     private ILogger? _logger;
     private ITimeProvider? _timeProvider;
     private IMessageQueue? _messageQueue;
+    private IScheduledMethod? _tickHandle;
     private double _currentHeading;
     private double _targetHeading;
     private bool _engaged;
@@ -46,6 +46,12 @@ public class AutosteerPlugin : ITickableModule, IConfigurableModule
 
         // Subscribe to engage/disengage commands with immediate execution (UI responsiveness)
         _messageBus.Subscribe<AutosteerEngageMessage>(OnEngageCommand);
+
+        // Schedule control loop at 10Hz
+        _tickHandle = context.Scheduler?.Schedule(
+            Tick,
+            rateHz: 10.0,
+            name: "AutosteerControl");
 
         _logger.LogInformation("Autosteer initialized with queued message processing");
         return Task.CompletedTask;
@@ -84,7 +90,11 @@ public class AutosteerPlugin : ITickableModule, IConfigurableModule
         return Task.CompletedTask;
     }
 
-    public Task ShutdownAsync() => Task.CompletedTask;
+    public Task ShutdownAsync()
+    {
+        _tickHandle?.Dispose();
+        return Task.CompletedTask;
+    }
     public ModuleHealth GetHealth() => ModuleHealth.Healthy;
 
     private void OnGpsPosition(GpsPositionMessage msg)
@@ -101,7 +111,7 @@ public class AutosteerPlugin : ITickableModule, IConfigurableModule
     /// Tick method called by scheduler at 10Hz
     /// Processes queued messages then runs control loop
     /// </summary>
-    public void Tick(long tickNumber, long monotonicMs)
+    private void Tick(long tickNumber, long monotonicMs)
     {
         // Process all queued messages (GPS, guidance updates)
         // This runs handlers in this module's thread context

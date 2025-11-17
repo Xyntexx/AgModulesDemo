@@ -93,11 +93,6 @@ public class ApplicationCore : IDisposable
                     _logger.LogError($"Missing dependencies: {string.Join(", ", result.MissingDependencies)}");
                 }
             }
-            else if (_scheduler != null && module is ITickableModule tickable)
-            {
-                // Register tickable modules with scheduler
-                _scheduler.RegisterModule(tickable);
-            }
         }
 
         // 4. Start scheduler if enabled
@@ -117,7 +112,7 @@ public class ApplicationCore : IDisposable
         if (_scheduler != null)
         {
             var stats = _scheduler.GetStatistics();
-            _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} modules ({stats.ModuleCount} scheduled)");
+            _logger.LogInformation($"AgOpenGPS Core started successfully with {loadedCount} modules ({stats.ScheduledMethodCount} scheduled methods)");
         }
         else
         {

@@ -35,15 +35,27 @@ IDisposable SubscribeQueued<T>(Action<T> handler, IMessageQueue queue);
 └────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Module-Configured Tick Rates
+### 2. Scheduled Methods with Configurable Rates
 
-Modules declare their desired tick rate:
+Modules schedule methods at their desired tick rates using `IScheduler.Schedule()`:
 
 ```csharp
-public interface ITickableModule : IAgModule
+public class MyModule : IAgModule
 {
-    double TickRateHz { get; }  // e.g., 10.0 for 10Hz
-    void Tick(long tickNumber, long monotonicMs);
+    private IScheduledMethod? _tickHandle;
+
+    public Task InitializeAsync(IModuleContext context)
+    {
+        _tickHandle = context.Scheduler?.Schedule(
+            Tick,
+            rateHz: 10.0,  // 10Hz
+            name: "MyModuleTick");
+    }
+
+    private void Tick(long tickNumber, long monotonicMs)
+    {
+        // Module logic here
+    }
 }
 ```
 
@@ -83,16 +95,13 @@ while (!cancelled)
 
 ### 4. Execution Order
 
-Modules execute in **deterministic order** each tick:
-
-1. Sort by `ModuleCategory` (IO → DataProcessing → Control → etc.)
-2. Then by rate (higher rate first for better timing)
+Scheduled methods execute in **registration order** each tick. Modules execute at their configured rates based on tick divisors.
 
 Example 10Hz tick:
 ```
-Tick 0ms:  DummyIO (IO, 10Hz)    → Publish GPS
-           PGN (DataProc, 10Hz)  → Parse GPS (immediate handler)
-           Autosteer (Control, 10Hz) → ProcessQueue(), Calculate()
+Tick 0ms:  DummyIO.Tick (10Hz)    → Publish GPS
+           PGN (immediate handler) → Parse GPS
+           Autosteer.Tick (10Hz)   → ProcessQueue(), Calculate()
 
 Tick 100ms: (repeat)
 ```
@@ -140,14 +149,29 @@ public class DummyIOPlugin : IAgModule
 ### New Pattern (Deterministic)
 
 ```csharp
-public class DummyIOPlugin : ITickableModule
+public class DummyIOPlugin : IAgModule
 {
-    public double TickRateHz => 10.0;
+    private IScheduledMethod? _simHandle;
 
-    public void Tick(long tickNumber, long monotonicMs)
+    public Task InitializeAsync(IModuleContext context)
+    {
+        _simHandle = context.Scheduler?.Schedule(
+            Tick,
+            rateHz: 10.0,
+            name: "VehicleSimulation");
+        return Task.CompletedTask;
+    }
+
+    private void Tick(long tickNumber, long monotonicMs)
     {
         UpdateState();   // Fast, ~0.15ms
         PublishGPS();    // Fast, ~0.10ms
+    }
+
+    public Task ShutdownAsync()
+    {
+        _simHandle?.Dispose();
+        return Task.CompletedTask;
     }
 }
 ```
@@ -160,9 +184,10 @@ public class DummyIOPlugin : ITickableModule
 ### Message Processing Pattern
 
 ```csharp
-public class AutosteerPlugin : ITickableModule
+public class AutosteerPlugin : IAgModule
 {
     private IMessageQueue _queue;
+    private IScheduledMethod? _tickHandle;
 
     public Task InitializeAsync(IModuleContext context)
     {
@@ -171,9 +196,17 @@ public class AutosteerPlugin : ITickableModule
         // Queued subscription - processes during Tick()
         context.MessageBus.SubscribeQueued<GpsPositionMessage>(
             OnGpsPosition, _queue);
+
+        // Schedule control loop at 10Hz
+        _tickHandle = context.Scheduler?.Schedule(
+            Tick,
+            rateHz: 10.0,
+            name: "AutosteerControl");
+
+        return Task.CompletedTask;
     }
 
-    public void Tick(long tickNumber, long monotonicMs)
+    private void Tick(long tickNumber, long monotonicMs)
     {
         // 1. Process all queued messages (in this thread)
         _queue.ProcessQueue();
@@ -189,6 +222,12 @@ public class AutosteerPlugin : ITickableModule
     {
         // Runs in scheduler thread during ProcessQueue()
         _currentHeading = msg.Heading;
+    }
+
+    public Task ShutdownAsync()
+    {
+        _tickHandle?.Dispose();
+        return Task.CompletedTask;
     }
 }
 ```
@@ -275,16 +314,25 @@ public void Scheduler_MaintainsAccurateTiming()
 
 ## Migration Guide
 
-### Step 1: Implement ITickableModule
+### Step 1: Add Scheduled Method
 
 ```csharp
-- public class MyModule : IAgModule
-+ public class MyModule : ITickableModule
+public class MyModule : IAgModule
 {
-+   public double TickRateHz => 20.0;  // 20Hz execution
++   private IScheduledMethod? _tickHandle;
+
+    public Task InitializeAsync(IModuleContext context)
+    {
++       _tickHandle = context.Scheduler?.Schedule(
++           Tick,
++           rateHz: 20.0,  // 20Hz execution
++           name: "MyModuleTick");
+        return Task.CompletedTask;
+    }
+}
 ```
 
-### Step 2: Replace While Loop with Tick()
+### Step 2: Replace While Loop with Tick Method
 
 ```csharp
 - private async Task Loop()
@@ -296,13 +344,23 @@ public void Scheduler_MaintainsAccurateTiming()
 -     }
 - }
 
-+ public void Tick(long tickNumber, long monotonicMs)
++ private void Tick(long tickNumber, long monotonicMs)
 + {
 +     DoWork();
 + }
 ```
 
-### Step 3: Use Queued Subscriptions for Stateful Handlers
+### Step 3: Add Cleanup
+
+```csharp
+public Task ShutdownAsync()
+{
++   _tickHandle?.Dispose();
+    return Task.CompletedTask;
+}
+```
+
+### Step 4: Use Queued Subscriptions for Stateful Handlers
 
 ```csharp
 public Task InitializeAsync(IModuleContext context)
@@ -311,9 +369,12 @@ public Task InitializeAsync(IModuleContext context)
 
 -   context.MessageBus.Subscribe<GpsPositionMessage>(OnGps);
 +   context.MessageBus.SubscribeQueued<GpsPositionMessage>(OnGps, _queue);
+
+    _tickHandle = context.Scheduler?.Schedule(Tick, 10.0);
+    return Task.CompletedTask;
 }
 
-public void Tick(long tickNumber, long monotonicMs)
+private void Tick(long tickNumber, long monotonicMs)
 {
 +   _queue.ProcessQueue();  // Process messages in this thread
     // ... rest of tick logic
