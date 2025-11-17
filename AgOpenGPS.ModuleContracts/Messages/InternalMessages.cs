@@ -10,10 +10,6 @@ public struct GuidanceLineMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Field boundary definition</summary>
@@ -23,10 +19,6 @@ public struct FieldBoundaryMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Application lifecycle events</summary>
@@ -34,10 +26,6 @@ public struct ApplicationStartedEvent
 {
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Application stopping event</summary>
@@ -45,10 +33,6 @@ public struct ApplicationStoppingEvent
 {
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Settings changed event</summary>
@@ -59,8 +43,4 @@ public struct SettingsChangedMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }

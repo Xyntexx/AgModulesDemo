@@ -97,7 +97,7 @@ public class MonitoringModule : IAgModule
         var metrics = new ModuleMetrics
         {
             ModuleName = evt.ModuleName,
-            LoadedAt = DateTimeOffset.FromUnixTimeMilliseconds(evt.TimestampMs).DateTime
+            LoadedAt = DateTimeOffset.FromUnixTimeMilliseconds(evt.Timestamp.SimClockMs).DateTime
         };
 
         _moduleMetrics[evt.ModuleId] = metrics;
@@ -108,7 +108,7 @@ public class MonitoringModule : IAgModule
     {
         if (_moduleMetrics.TryGetValue(evt.ModuleId, out var metrics))
         {
-            metrics.UnloadedAt = DateTimeOffset.FromUnixTimeMilliseconds(evt.TimestampMs).DateTime;
+            metrics.UnloadedAt = DateTimeOffset.FromUnixTimeMilliseconds(evt.Timestamp.SimClockMs).DateTime;
             _logger?.LogInformation($"Module unloaded: {evt.ModuleName}, uptime: {metrics.Uptime}");
         }
     }

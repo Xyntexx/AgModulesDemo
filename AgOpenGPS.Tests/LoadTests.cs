@@ -51,7 +51,7 @@ public class LoadTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
 
             // Simulate 10Hz rate
@@ -173,7 +173,7 @@ public class LoadTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
 
             // Simulate steer commands at 20Hz
@@ -181,7 +181,7 @@ public class LoadTests
             {
                 SteerAngleDegrees = 5.0,
                 SpeedPWM = 128,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
 
             // Sample metrics every second
@@ -247,7 +247,7 @@ public class LoadTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
         }
 

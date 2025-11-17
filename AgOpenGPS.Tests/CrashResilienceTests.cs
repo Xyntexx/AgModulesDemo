@@ -53,7 +53,7 @@ public class CrashResilienceTests
             Heading = 45.0,
             Speed = 2.0,
             FixQuality = GpsFixQuality.RTK_Fixed,
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
         });
 
         await Task.Delay(100);
@@ -68,7 +68,7 @@ public class CrashResilienceTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
         }
 
@@ -128,14 +128,14 @@ public class CrashResilienceTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
 
             messageBus.Publish(new SteerCommandMessage
             {
                 SteerAngleDegrees = 5.0,
                 SpeedPWM = 128,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
 
             await Task.Delay(10);
@@ -220,7 +220,7 @@ public class CrashResilienceTests
                     Heading = 45.0,
                     Speed = 2.0,
                     FixQuality = GpsFixQuality.RTK_Fixed,
-                    TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
                 });
                 await Task.Delay(100); // 10Hz
             }
@@ -324,7 +324,7 @@ public class CrashResilienceTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
         }
 

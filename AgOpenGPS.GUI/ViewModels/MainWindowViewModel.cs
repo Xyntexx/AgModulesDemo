@@ -160,7 +160,7 @@ public partial class MainWindowViewModel : ObservableObject
         var msg = new AutosteerEngageMessage
         {
             IsEngaged = AutosteerEngaged,
-            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
         };
 
         _messageBus.Publish(in msg);

@@ -11,14 +11,6 @@ public struct ModuleLoadedEvent
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp { get; set; }
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs
-    {
-        get => Timestamp.SimClockMs;
-        set => Timestamp = TimestampMetadata.CreateExplicit(value, value, string.Empty, -1, -1.0, 0);
-    }
 }
 
 /// <summary>
@@ -31,14 +23,6 @@ public struct ModuleUnloadedEvent
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp { get; set; }
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs
-    {
-        get => Timestamp.SimClockMs;
-        set => Timestamp = TimestampMetadata.CreateExplicit(value, value, string.Empty, -1, -1.0, 0);
-    }
 }
 
 /// <summary>
@@ -51,12 +35,4 @@ public struct ModuleReloadedEvent
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp { get; set; }
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs instead")]
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs
-    {
-        get => Timestamp.SimClockMs;
-        set => Timestamp = TimestampMetadata.CreateExplicit(value, value, string.Empty, -1, -1.0, 0);
-    }
 }

@@ -7,10 +7,6 @@ public readonly struct AutosteerEngageMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp { get; init; }
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Steer command to autosteer controller</summary>
@@ -22,10 +18,6 @@ public struct SteerCommandMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Section control (on/off for each spray section)</summary>
@@ -35,10 +27,6 @@ public struct SectionControlMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Relay control command</summary>
@@ -49,10 +37,6 @@ public struct RelayCommandMessage
 
     /// <summary>Comprehensive timestamp with SimClock, UTC, and GPS time</summary>
     public TimestampMetadata Timestamp;
-
-    /// <summary>Legacy timestamp field for backward compatibility (deprecated - use Timestamp.SimClockMs)</summary>
-    [Obsolete("Use Timestamp.SimClockMs instead")]
-    public long TimestampMs => Timestamp.SimClockMs;
 }
 
 /// <summary>Raw data to send to hardware (from PGN encoder)</summary>

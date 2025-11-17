@@ -80,7 +80,7 @@ public class TimingTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
             await Task.Delay(1); // Simulate 10Hz rate
         }
@@ -136,7 +136,7 @@ public class TimingTests
                 Heading = 45.0,
                 Speed = 2.0,
                 FixQuality = GpsFixQuality.RTK_Fixed,
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
             });
 
             await Task.Delay(50); // 20Hz rate
@@ -176,7 +176,7 @@ public class TimingTests
 
         messageBus.Subscribe<ModuleLoadedEvent>(evt =>
         {
-            startTimes[evt.ModuleName] = DateTimeOffset.FromUnixTimeMilliseconds(evt.TimestampMs).DateTime;
+            startTimes[evt.ModuleName] = DateTimeOffset.FromUnixTimeMilliseconds(evt.Timestamp.SimClockMs).DateTime;
         });
 
         // Act

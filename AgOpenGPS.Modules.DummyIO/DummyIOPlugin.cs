@@ -1,8 +1,8 @@
 namespace AgOpenGPS.Modules.DummyIO;
 
 using System.Text;
-using AgOpenGPS.ModuleContracts;
-using AgOpenGPS.ModuleContracts.Messages;
+using ModuleContracts;
+using ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 
