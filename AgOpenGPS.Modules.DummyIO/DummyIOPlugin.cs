@@ -161,7 +161,6 @@ public class DummyIOPlugin : IAgModule
         {
             Data = Encoding.ASCII.GetBytes(gga),
             Channel = IOChannel.Serial,
-            Timestamp = TimestampMetadata.CreateSimClockOnly(_timeProvider, 0)
         };
         _messageBus.Publish(in ggaMessage);
 
@@ -170,7 +169,6 @@ public class DummyIOPlugin : IAgModule
         {
             Data = Encoding.ASCII.GetBytes(rmc),
             Channel = IOChannel.Serial,
-            Timestamp = TimestampMetadata.CreateSimClockOnly(_timeProvider, 0)
         };
         _messageBus.Publish(in rmcMessage);
 

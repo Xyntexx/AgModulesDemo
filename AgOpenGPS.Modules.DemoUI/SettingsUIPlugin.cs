@@ -97,7 +97,6 @@ public class SettingsUIPlugin : IAgModule
                     {
                         ModuleName = pluginName,
                         SettingsJson = JsonSerializer.Serialize(settings),
-                        Timestamp = TimestampMetadata.CreateSimClockOnly(_context.TimeProvider, 0)
                     };
                     _messageBus.Publish(in msg);
                 }

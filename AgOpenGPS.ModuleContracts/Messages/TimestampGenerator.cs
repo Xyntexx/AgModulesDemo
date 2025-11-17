@@ -41,13 +41,13 @@ public class TimestampGenerator
     }
 
     /// <summary>
-    /// Creates a minimal timestamp with only SimClock time (fastest).
+    /// Creates a minimal timestamp with only monotonic time (fastest).
     /// Use this for high-frequency messages (>100Hz) where UTC/GPS overhead is too high.
     /// </summary>
-    public TimestampMetadata CreateSimClockOnly<T>()
+    public TimestampMetadata CreateMonotonicOnly<T>()
     {
         var sequence = GetNextSequence<T>();
-        return TimestampMetadata.CreateSimClockOnly(_timeProvider, sequence);
+        return TimestampMetadata.CreateMonotonicOnly(_timeProvider, sequence);
     }
 
     /// <summary>

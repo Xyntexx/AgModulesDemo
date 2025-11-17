@@ -1,8 +1,10 @@
 namespace AgOpenGPS.Core;
 
 using AgOpenGPS.ModuleContracts;
+using AgOpenGPS.ModuleContracts.Messages;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Reflection;
 
 /// <summary>
 /// High-performance message bus implementation
@@ -16,6 +18,7 @@ public class MessageBus : IMessageBus, IDisposable
     private readonly ConcurrentDictionary<string, List<IDisposable>> _scopedSubscriptions = new();
     private readonly ConcurrentDictionary<Type, LastMessageInfo> _lastMessages = new();
     private readonly ConcurrentDictionary<Type, FailureTracker> _failureTrackers = new();
+    private readonly ConcurrentDictionary<Type, long> _sequenceNumbers = new();
     private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.SupportsRecursion);
     private readonly ITimeProvider _timeProvider;
     private readonly ILogger<MessageBus> _logger;
@@ -145,8 +148,11 @@ public class MessageBus : IMessageBus, IDisposable
 
         var messageType = typeof(T);
 
+        // Auto-timestamp: Create a copy with timestamp added
+        T timestampedMessage = AddTimestamp(message);
+
         // Store last message with timestamp and enforce limits
-        StoreLastMessage(messageType, message);
+        StoreLastMessage(messageType, timestampedMessage);
 
         // 1. Process immediate subscribers
         _lock.EnterReadLock();
@@ -176,7 +182,7 @@ public class MessageBus : IMessageBus, IDisposable
             {
                 try
                 {
-                    ((Action<T>)sub.Handler)(message);
+                    ((Action<T>)sub.Handler)(timestampedMessage);
 
                     // Reset failure count on success
                     ResetFailureCount(messageType, sub.SubscriptionId);
@@ -234,7 +240,7 @@ public class MessageBus : IMessageBus, IDisposable
                 try
                 {
                     // Enqueue message with handler for later processing
-                    sub.Queue?.EnqueueWithHandler(message, (Action<T>)sub.Handler);
+                    sub.Queue?.EnqueueWithHandler(timestampedMessage, (Action<T>)sub.Handler);
                 }
                 catch (Exception ex)
                 {
@@ -495,6 +501,33 @@ public class MessageBus : IMessageBus, IDisposable
         {
             _lock.ExitWriteLock();
         }
+    }
+
+    /// <summary>
+    /// Automatically adds timestamp to a message if it has a Timestamp field.
+    /// Creates a copy of the message with the Timestamp field populated.
+    /// </summary>
+    private T AddTimestamp<T>(T message) where T : struct
+    {
+        var messageType = typeof(T);
+        var timestampField = messageType.GetField("Timestamp");
+
+        // If message doesn't have a Timestamp field, return as-is
+        if (timestampField == null || timestampField.FieldType != typeof(TimestampMetadata))
+        {
+            return message;
+        }
+
+        // Get next sequence number for this message type
+        var sequence = _sequenceNumbers.AddOrUpdate(messageType, 1, (_, current) => current + 1);
+
+        // Create timestamp with monotonic time only (minimal overhead)
+        var timestamp = TimestampMetadata.CreateMonotonicOnly(_timeProvider, sequence);
+
+        // Create a copy of the message and set the timestamp
+        var boxed = (object)message;
+        timestampField.SetValue(boxed, timestamp);
+        return (T)boxed;
     }
 }
 

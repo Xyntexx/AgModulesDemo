@@ -7,16 +7,17 @@ namespace AgOpenGPS.ModuleContracts.Messages;
 public readonly struct TimestampMetadata
 {
     /// <summary>
-    /// Deterministic simulation clock time in milliseconds since epoch.
+    /// Monotonic clock time in milliseconds since epoch.
     /// This is the authoritative timebase for replay and verification.
     /// All modules receive the same ITimeProvider, ensuring consistency.
+    /// Never moves backward, immune to system clock adjustments.
     /// </summary>
-    public long SimClockMs { get; init; }
+    public long MonotonicMs { get; init; }
 
     /// <summary>
     /// Wall clock UTC time in milliseconds since Unix epoch (1970-01-01).
     /// Used for cross-system correlation and human-readable logs.
-    /// May differ from SimClockMs in simulation mode.
+    /// May differ from MonotonicMs in simulation mode.
     /// </summary>
     public long UtcTimestampMs { get; init; }
 
@@ -59,12 +60,12 @@ public readonly struct TimestampMetadata
         long sequenceNumber,
         (int week, double seconds)? gpsTime = null)
     {
-        var simClockMs = timeProvider.UnixTimeMilliseconds;
+        var monotonicMs = timeProvider.UnixTimeMilliseconds;
         var utcNow = DateTimeOffset.UtcNow;
 
         return new TimestampMetadata
         {
-            SimClockMs = simClockMs,
+            MonotonicMs = monotonicMs,
             UtcTimestampMs = utcNow.ToUnixTimeMilliseconds(),
             UtcIso8601 = utcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
             GpsWeek = gpsTime?.week ?? -1,
@@ -74,14 +75,14 @@ public readonly struct TimestampMetadata
     }
 
     /// <summary>
-    /// Creates timestamp metadata with only SimClock time (minimal overhead).
+    /// Creates timestamp metadata with only monotonic time (minimal overhead).
     /// Use this for high-frequency messages where GPS/UTC correlation is not needed.
     /// </summary>
-    public static TimestampMetadata CreateSimClockOnly(ITimeProvider timeProvider, long sequenceNumber)
+    public static TimestampMetadata CreateMonotonicOnly(ITimeProvider timeProvider, long sequenceNumber)
     {
         return new TimestampMetadata
         {
-            SimClockMs = timeProvider.UnixTimeMilliseconds,
+            MonotonicMs = timeProvider.UnixTimeMilliseconds,
             UtcTimestampMs = 0,
             UtcIso8601 = string.Empty,
             GpsWeek = -1,
@@ -94,7 +95,7 @@ public readonly struct TimestampMetadata
     /// Creates timestamp metadata with explicit values (for testing/replay).
     /// </summary>
     public static TimestampMetadata CreateExplicit(
-        long simClockMs,
+        long monotonicMs,
         long utcTimestampMs,
         string utcIso8601,
         int gpsWeek,
@@ -103,7 +104,7 @@ public readonly struct TimestampMetadata
     {
         return new TimestampMetadata
         {
-            SimClockMs = simClockMs,
+            MonotonicMs = monotonicMs,
             UtcTimestampMs = utcTimestampMs,
             UtcIso8601 = utcIso8601,
             GpsWeek = gpsWeek,
@@ -119,16 +120,16 @@ public readonly struct TimestampMetadata
 
     /// <summary>
     /// Calculates time difference in milliseconds between this timestamp and another.
-    /// Uses SimClockMs for deterministic comparison.
+    /// Uses MonotonicMs for deterministic comparison.
     /// </summary>
-    public long DeltaMs(TimestampMetadata other) => SimClockMs - other.SimClockMs;
+    public long DeltaMs(TimestampMetadata other) => MonotonicMs - other.MonotonicMs;
 
     public override string ToString()
     {
         if (!string.IsNullOrEmpty(UtcIso8601))
         {
-            return $"[SimClock: {SimClockMs}ms, UTC: {UtcIso8601}, Seq: {SequenceNumber}]";
+            return $"[Monotonic: {MonotonicMs}ms, UTC: {UtcIso8601}, Seq: {SequenceNumber}]";
         }
-        return $"[SimClock: {SimClockMs}ms, Seq: {SequenceNumber}]";
+        return $"[Monotonic: {MonotonicMs}ms, Seq: {SequenceNumber}]";
     }
 }

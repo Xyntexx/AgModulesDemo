@@ -145,7 +145,6 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
                     SteerAngleDegrees = 0,
                     SpeedPWM = 0,
                     IsEngaged = false,
-                    Timestamp = TimestampMetadata.CreateSimClockOnly(_timeProvider, 0)
                 };
                 _messageBus.Publish(in cmd);
             }
@@ -185,7 +184,6 @@ public class AutosteerPlugin : IAgModule, IConfigurableModule
             SteerAngleDegrees = steerAngle,
             SpeedPWM = 200, // Full speed
             IsEngaged = _engaged,
-            Timestamp = TimestampMetadata.CreateSimClockOnly(_timeProvider, 0)
         };
 
         _messageBus.Publish(in cmd);
