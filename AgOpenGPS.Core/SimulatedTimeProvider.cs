@@ -189,9 +189,43 @@ public class SimulatedTimeProvider : ITimeProvider
 
         try
         {
-            // If time scale > 0, simulate real-time delay with scaling
-            if (TimeScale > 0)
+            // Choose delay strategy based on TimeScale
+            if (TimeScale == 0)
             {
+                // Time is frozen, wait for manual advancement
+                await operation.CompletionSource.Task;
+            }
+            else if (TimeScale > 100)
+            {
+                // Very high speed (>100x): Use yield-based delays without automatic time advancement
+                // This prevents real-time Task.Delay bottlenecks and task starvation
+                //
+                // At unlimited speed, we don't try to advance time automatically because:
+                // 1. Multiple concurrent delays would race to advance time
+                // 2. It's impossible to know if delays are concurrent or sequential
+                // 3. Time should advance based on the simulation logic, not task scheduling
+                //
+                // Instead, we atomically advance time to the operation deadline if needed
+                lock (_lock)
+                {
+                    // Only advance if this delay would move time forward
+                    var currentTime = _wallClockTime;
+                    if (operation.Deadline > currentTime)
+                    {
+                        var timeToAdvance = operation.Deadline - currentTime;
+                        _monotonicMs += (long)timeToAdvance.TotalMilliseconds;
+                        _wallClockTime = operation.Deadline;
+                    }
+                }
+
+                _pendingDelays.TryRemove(operation.Id, out _);
+
+                // Yield to give other tasks a chance to run
+                await Task.Yield();
+            }
+            else
+            {
+                // Normal speed (1-100x): Use scaled real-time delays
                 var scaledDuration = TimeSpan.FromTicks((long)(duration.Ticks / TimeScale));
                 var delayTask = Task.Delay(scaledDuration, cancellationToken);
                 var completionTask = operation.CompletionSource.Task;
@@ -204,11 +238,6 @@ public class SimulatedTimeProvider : ITimeProvider
                     Advance(duration);
                     _pendingDelays.TryRemove(operation.Id, out _);
                 }
-            }
-            else
-            {
-                // Time is frozen, just wait for manual advancement
-                await operation.CompletionSource.Task;
             }
         }
         catch (OperationCanceledException)
