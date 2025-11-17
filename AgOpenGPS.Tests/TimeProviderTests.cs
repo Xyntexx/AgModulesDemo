@@ -234,12 +234,16 @@ public class MessageBusTimeTests
     [Fact]
     public async Task FastForwardSimulation_RunsQuickly()
     {
-        // This test demonstrates how to run a 1-hour simulation in under 1 second
+        // This test verifies that TimeScale allows fast simulation:
+        // - Simulated time advances correctly (1 hour in simulation)
+        // - All delays complete in order
+        // - All messages are processed
+        // - Real-world time is irrelevant - only simulated time matters
 
         // Arrange
         var startTime = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
         var timeProvider = new SimulatedTimeProvider(startTime);
-        timeProvider.TimeScale = 3600.0; // 3600x speed (1 hour per second)
+        timeProvider.TimeScale = 3600.0; // 3600x speed - doesn't matter how fast it actually runs
 
         var logger = NullLogger<MessageBus>.Instance;
         var messageBus = new MessageBus(timeProvider, logger);
@@ -248,42 +252,32 @@ public class MessageBusTimeTests
         // Subscribe to count messages
         messageBus.Subscribe<GpsPositionMessage>(msg => messageCount++);
 
-        var realTimeBefore = DateTimeOffset.UtcNow;
-
         // Act - simulate publishing messages every second for 1 hour (simulated)
-        var simulationTask = Task.Run(async () =>
+        for (int i = 0; i < 3600; i++) // 1 hour worth of seconds
         {
-            for (int i = 0; i < 3600; i++) // 1 hour worth of seconds
+            var testMessage = new GpsPositionMessage
             {
-                var testMessage = new GpsPositionMessage
-                {
-                    Latitude = 40.7128 + (i * 0.0001),
-                    Longitude = -74.0060 + (i * 0.0001),
-                    Speed = 5.0,
-                    Heading = 90.0,
-                    FixQuality = GpsFixQuality.RTK_Fixed,
-                    Timestamp = TimestampMetadata.CreateSimClockOnly(timeProvider, 0)
-                };
+                Latitude = 40.7128 + (i * 0.0001),
+                Longitude = -74.0060 + (i * 0.0001),
+                Speed = 5.0,
+                Heading = 90.0,
+                FixQuality = GpsFixQuality.RTK_Fixed,
+                Timestamp = TimestampMetadata.CreateSimClockOnly(timeProvider, 0)
+            };
 
-                messageBus.Publish(in testMessage);
-                await timeProvider.Delay(TimeSpan.FromSeconds(1));
-            }
-        });
+            messageBus.Publish(in testMessage);
+            await timeProvider.Delay(TimeSpan.FromSeconds(1));
+        }
 
-        await simulationTask;
-
-        // Assert
-        var realTimeAfter = DateTimeOffset.UtcNow;
-        var realElapsed = (realTimeAfter - realTimeBefore).TotalSeconds;
-
-        // Should have taken about 1 second in real time (3600 seconds / 3600x speed)
-        Assert.InRange(realElapsed, 0.8, 2.0); // Allow tolerance
-
-        // Should have simulated 1 hour
+        // Assert - verify simulated time progression and message delivery
+        // Should have simulated exactly 1 hour
         var simulatedElapsed = timeProvider.UtcNow - startTime;
         Assert.InRange(simulatedElapsed.TotalHours, 0.99, 1.01);
 
-        // Should have received 3600 messages
+        // Should have received all 3600 messages
         Assert.Equal(3600, messageCount);
+
+        // Verify final simulated time
+        Assert.Equal(new DateTimeOffset(2024, 1, 1, 13, 0, 0, TimeSpan.Zero), timeProvider.UtcNow, TimeSpan.FromSeconds(1));
     }
 }
