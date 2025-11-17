@@ -189,7 +189,7 @@ public class MessageBusTimeTests
             Speed = 5.0,
             Heading = 90.0,
             FixQuality = GpsFixQuality.RTK_Fixed,
-            Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
+            Timestamp = TimestampMetadata.CreateSimClockOnly(timeProvider, 0)
         };
 
         // Act
@@ -217,7 +217,7 @@ public class MessageBusTimeTests
             Speed = 5.0,
             Heading = 90.0,
             FixQuality = GpsFixQuality.RTK_Fixed,
-            Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
+            Timestamp = TimestampMetadata.CreateSimClockOnly(timeProvider, 0)
         };
 
         // Act
@@ -262,7 +262,7 @@ public class MessageBusTimeTests
                     Speed = 5.0,
                     Heading = 90.0,
                     FixQuality = GpsFixQuality.RTK_Fixed,
-                    Timestamp = TimestampMetadata.CreateSimClockOnly(new SimulatedTimeProvider(), 0)
+                    Timestamp = TimestampMetadata.CreateSimClockOnly(timeProvider, 0)
                 };
 
                 messageBus.Publish(in testMessage);
