@@ -332,16 +332,17 @@ public class MessageBusTimeTests
             task3Events.Add((timeProvider.UtcNow, "Completed"));
         });
 
-        // Wait for all tasks with timeout
-        var allTasks = Task.WhenAll(task1, task2, task3);
-        var timeout = Task.Delay(TimeSpan.FromSeconds(5)); // 5 seconds real-time timeout
+        // Use EventScheduler to coordinate task execution
+        var scheduler = new EventScheduler(timeProvider);
+        var runTask = scheduler.RunSimulationAsync(new[] { task1, task2, task3 });
 
-        var completedTask = await Task.WhenAny(allTasks, timeout);
+        var timeout = Task.Delay(TimeSpan.FromSeconds(5)); // 5 seconds real-time timeout
+        var completedTask = await Task.WhenAny(runTask, timeout);
 
         var realTimeElapsed = DateTimeOffset.UtcNow - realTimeStart;
 
         // Assert
-        Assert.True(completedTask == allTasks,
+        Assert.True(completedTask == runTask,
             $"Tasks did not complete within 5 seconds real-time. " +
             $"Real time elapsed: {realTimeElapsed.TotalSeconds:F2}s. " +
             $"Task1 events: {task1Events.Count}, Task2 events: {task2Events.Count}, Task3 events: {task3Events.Count}");
@@ -409,13 +410,15 @@ public class MessageBusTimeTests
             }));
         }
 
-        var allTasks = Task.WhenAll(tasks);
-        var timeout = Task.Delay(TimeSpan.FromSeconds(10)); // 10 seconds real-time timeout
+        // Use EventScheduler to coordinate task execution
+        var scheduler = new EventScheduler(timeProvider);
+        var runTask = scheduler.RunSimulationAsync(tasks.ToArray());
 
-        var completedTask = await Task.WhenAny(allTasks, timeout);
+        var timeout = Task.Delay(TimeSpan.FromSeconds(10)); // 10 seconds real-time timeout
+        var completedTask = await Task.WhenAny(runTask, timeout);
 
         // Assert - All tasks should complete, none starved
-        Assert.True(completedTask == allTasks,
+        Assert.True(completedTask == runTask,
             $"Tasks timed out. Completion counts: [{string.Join(", ", taskCompletionCounts)}]");
 
         for (int i = 0; i < 10; i++)

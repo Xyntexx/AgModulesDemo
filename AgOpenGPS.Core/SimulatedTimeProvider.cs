@@ -96,6 +96,25 @@ public class SimulatedTimeProvider : ITimeProvider
     }
 
     /// <summary>
+    /// Gets the number of pending delays waiting to complete
+    /// </summary>
+    public int PendingDelayCount => _pendingDelays.Count;
+
+    /// <summary>
+    /// Gets whether there are any pending delays
+    /// </summary>
+    public bool HasPendingDelays => _pendingDelays.Count > 0;
+
+    /// <summary>
+    /// Gets the time of the next pending delay, or null if no delays pending
+    /// </summary>
+    public DateTimeOffset? GetNextDelayTime()
+    {
+        var delays = _pendingDelays.Values.OrderBy(d => d.Deadline).ToList();
+        return delays.Count > 0 ? delays[0].Deadline : null;
+    }
+
+    /// <summary>
     /// Manually advances time by the specified duration.
     /// Advances both monotonic and wall clock time.
     /// Completes any delays that expire during this advance.
@@ -160,9 +179,9 @@ public class SimulatedTimeProvider : ITimeProvider
     }
 
     /// <summary>
-    /// Asynchronously waits for a specified time span
-    /// Completes instantly if time is manually advanced past the deadline
-    /// Respects time scaling for automatic advancement
+    /// Asynchronously waits for a specified time span.
+    /// ALWAYS creates a pending delay and waits for external time advancement.
+    /// This ensures clean separation: delays register intent, runners advance time.
     /// </summary>
     public async Task Delay(TimeSpan duration, CancellationToken cancellationToken = default)
     {
@@ -189,56 +208,8 @@ public class SimulatedTimeProvider : ITimeProvider
 
         try
         {
-            // Choose delay strategy based on TimeScale
-            if (TimeScale == 0)
-            {
-                // Time is frozen, wait for manual advancement
-                await operation.CompletionSource.Task;
-            }
-            else if (TimeScale > 100)
-            {
-                // Very high speed (>100x): Use yield-based delays without automatic time advancement
-                // This prevents real-time Task.Delay bottlenecks and task starvation
-                //
-                // At unlimited speed, we don't try to advance time automatically because:
-                // 1. Multiple concurrent delays would race to advance time
-                // 2. It's impossible to know if delays are concurrent or sequential
-                // 3. Time should advance based on the simulation logic, not task scheduling
-                //
-                // Instead, we atomically advance time to the operation deadline if needed
-                lock (_lock)
-                {
-                    // Only advance if this delay would move time forward
-                    var currentTime = _wallClockTime;
-                    if (operation.Deadline > currentTime)
-                    {
-                        var timeToAdvance = operation.Deadline - currentTime;
-                        _monotonicMs += (long)timeToAdvance.TotalMilliseconds;
-                        _wallClockTime = operation.Deadline;
-                    }
-                }
-
-                _pendingDelays.TryRemove(operation.Id, out _);
-
-                // Yield to give other tasks a chance to run
-                await Task.Yield();
-            }
-            else
-            {
-                // Normal speed (1-100x): Use scaled real-time delays
-                var scaledDuration = TimeSpan.FromTicks((long)(duration.Ticks / TimeScale));
-                var delayTask = Task.Delay(scaledDuration, cancellationToken);
-                var completionTask = operation.CompletionSource.Task;
-
-                var completedTask = await Task.WhenAny(delayTask, completionTask);
-
-                // If delay task completed naturally, advance time
-                if (completedTask == delayTask)
-                {
-                    Advance(duration);
-                    _pendingDelays.TryRemove(operation.Id, out _);
-                }
-            }
+            // Wait for a runner to advance time and complete this delay
+            await operation.CompletionSource.Task;
         }
         catch (OperationCanceledException)
         {

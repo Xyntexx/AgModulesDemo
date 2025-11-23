@@ -17,7 +17,7 @@ public class ApplicationCore : IDisposable
     private readonly MessageBus _messageBus;
     private readonly ITimeProvider _timeProvider;
     private readonly ModuleManager _moduleManager;
-    private readonly RateScheduler? _scheduler;
+    private readonly IScheduler? _scheduler;
     private readonly CancellationTokenSource _shutdownCts = new();
     private volatile bool _disposed;
     private readonly bool _useScheduler;
@@ -35,22 +35,17 @@ public class ApplicationCore : IDisposable
         _messageBus = messageBus;
         _timeProvider = timeProvider;
 
-        // Check if scheduler is enabled and create it first
+        // Check if scheduler is enabled and create it
         _useScheduler = _configuration.GetValue<bool>("Core:UseScheduler", true);
 
         if (_useScheduler)
         {
-            var baseTickRateHz = _configuration.GetValue<double>("Core:SchedulerBaseRateHz", 100.0);
-            _scheduler = new RateScheduler(
-                baseTickRateHz,
-                _timeProvider,
-                _services.GetRequiredService<ILogger<RateScheduler>>());
-
-            _logger.LogInformation("Rate scheduler enabled with base rate {BaseRate}Hz", baseTickRateHz);
+            _scheduler = new EventScheduler(_timeProvider);
+            _logger.LogInformation("Event scheduler enabled (unified rate + time-based events)");
         }
         else
         {
-            _logger.LogInformation("Rate scheduler disabled - modules will use free-running execution");
+            _logger.LogInformation("Scheduler disabled - modules will use free-running execution");
         }
 
         // Create module manager with optional scheduler
@@ -96,10 +91,10 @@ public class ApplicationCore : IDisposable
         }
 
         // 4. Start scheduler if enabled
-        if (_scheduler != null)
+        if (_scheduler is EventScheduler eventScheduler)
         {
-            _scheduler.Start();
-            _logger.LogInformation("Rate scheduler started");
+            eventScheduler.Start();
+            _logger.LogInformation("Event scheduler started");
         }
 
         // 5. Publish application started event
@@ -125,10 +120,10 @@ public class ApplicationCore : IDisposable
         _logger.LogInformation("AgOpenGPS Core stopping...");
 
         // Stop scheduler first
-        if (_scheduler != null)
+        if (_scheduler is EventScheduler eventScheduler)
         {
-            _scheduler.Stop();
-            _logger.LogInformation("Rate scheduler stopped");
+            eventScheduler.Stop();
+            _logger.LogInformation("Event scheduler stopped");
         }
 
         // Signal shutdown
@@ -206,7 +201,13 @@ public class ApplicationCore : IDisposable
         if (_disposed) return;
 
         _disposed = true;
-        _scheduler?.Dispose();
+
+        // Dispose scheduler if it's IDisposable
+        if (_scheduler is IDisposable disposableScheduler)
+        {
+            disposableScheduler.Dispose();
+        }
+
         _moduleManager.Dispose();
         _messageBus.Dispose();
         _shutdownCts.Dispose();
