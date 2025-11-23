@@ -1,5 +1,14 @@
 # Async Task Coordination for Simulations
 
+> **STATUS: Historical Investigation Document (November 2024)**
+> This document explores design options that led to the EventScheduler implementation.
+> **Current Implementation:** `EventScheduler.RunSimulationAsync()` uses Option 5 (Simplified Pump Loop)
+> See: `AgOpenGPS.Core/EventScheduler.cs` and `docs/EVENT_SCHEDULER_MIGRATION.md`
+
+---
+
+## Background
+
 **Problem:** How do we know when to advance time when running async tasks at unlimited speed?
 
 ## The Challenge
@@ -243,12 +252,11 @@ public static async Task RunSimulation(
     }
 }
 
-// Usage
-await SimulationRunner.RunSimulation(
-    timeProvider,
+// Usage (conceptual - see EventScheduler for actual implementation)
+await scheduler.RunSimulationAsync(new[] {
     Module1.RunAsync(timeProvider),
     Module2.RunAsync(timeProvider)
-);
+});
 ```
 
 **Pros:**
@@ -428,11 +436,16 @@ await Task.WhenAll(task1, task2);
 
 ## Recommendation
 
-**For simple test cases:** Use `CompleteAllDelays()`
+**✅ IMPLEMENTED:** EventScheduler uses Option 5 (Simplified Pump Loop)
+- See: `AgOpenGPS.Core/EventScheduler.cs` - `RunSimulationAsync()` method
+- Combines rate-based scheduling with time-based delays
+- Works with both SystemTimeProvider and SimulatedTimeProvider
 
-**For complex simulations:** Implement `SimulationCoordinator` with proper quiescence detection
+**For simple test cases:** Use `EventScheduler.RunSimulationAsync()`
 
-**For production:** Keep current async/await architecture (TimeScale 1-100x)
+**For time-scaled tests:** Use `EventScheduler.RunRealTimeAsync()` with `TimeScale`
+
+**For production:** Use `EventScheduler.Start()` (background thread mode)
 
 ---
 
