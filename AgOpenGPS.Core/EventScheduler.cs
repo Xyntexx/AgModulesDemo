@@ -1,6 +1,7 @@
 namespace AgOpenGPS.Core;
 
 using AgOpenGPS.ModuleContracts;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 /// <summary>
@@ -20,6 +21,7 @@ using System.Collections.Concurrent;
 public class EventScheduler : IScheduler, IDisposable
 {
     private readonly ITimeProvider _timeProvider;
+    private readonly ILogger<EventScheduler>? _logger;
     private readonly ConcurrentDictionary<Guid, ScheduledMethod> _scheduledMethods = new();
     private readonly object _lock = new();
     private bool _isRunning = false;
@@ -28,9 +30,10 @@ public class EventScheduler : IScheduler, IDisposable
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed = false;
 
-    public EventScheduler(ITimeProvider timeProvider)
+    public EventScheduler(ITimeProvider timeProvider, ILogger<EventScheduler>? logger = null)
     {
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     /// <summary>
@@ -388,7 +391,7 @@ public class EventScheduler : IScheduler, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"EventScheduler background loop error: {ex.Message}");
+            _logger?.LogError(ex, "EventScheduler background loop error");
         }
     }
 
@@ -422,7 +425,7 @@ public class EventScheduler : IScheduler, IDisposable
                 catch (Exception ex)
                 {
                     // Log error but continue with other methods
-                    Console.WriteLine($"Error executing scheduled method {method.Name}: {ex.Message}");
+                    _logger?.LogError(ex, "Error executing scheduled method {MethodName}", method.Name);
                 }
                 finally
                 {

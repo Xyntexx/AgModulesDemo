@@ -40,7 +40,7 @@ public class ApplicationCore : IDisposable
 
         if (_useScheduler)
         {
-            _scheduler = new EventScheduler(_timeProvider);
+            _scheduler = new EventScheduler(_timeProvider, _services.GetRequiredService<ILogger<EventScheduler>>());
             _logger.LogInformation("Event scheduler enabled (unified rate + time-based events)");
         }
         else
